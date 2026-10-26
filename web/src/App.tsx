@@ -77,7 +77,9 @@ function AdminLayout() {
 function AuthorLayout() {
   // One list fetch, refreshed by the usual realtime invalidations; counts tickets with an unread team reply.
   const { data: tickets } = useAuthorTickets({ pageSize: 100, sort: "updated" });
-  const awaiting = tickets?.data.filter((t) => t.awaitingAuthor).length ?? null;
+  // Same rule as the "New reply" markers on My Tickets and the dashboard: only tickets still being worked on.
+  const awaiting =
+    tickets?.data.filter((t) => t.awaitingAuthor && (t.status === "open" || t.status === "in_progress")).length ?? null;
   const groups = useMemo<NavGroup[]>(
     () => [
       { label: "Overview", items: [{ to: "/author/overview", label: "Dashboard", icon: <DashboardIcon /> }] },
