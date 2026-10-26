@@ -52,71 +52,80 @@ export function LoginPage() {
   }
 
   return (
-    <div className="login">
-      <div className="login__card card">
-        <h1 className="login__title">BookLeaf</h1>
-        <p className="muted">Author Support &amp; Communication Portal</p>
-        <form onSubmit={(e) => void onSubmit(e)} noValidate className="stack">
-          {formError && (
-            <div className="alert alert--error" role="alert">
-              {formError}
-            </div>
-          )}
-          <FormField label="Email" error={fieldErrors.email}>
-            {(p) => (
-              <input
-                {...p}
-                type="email"
-                autoComplete="username"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoFocus
-              />
+    <div className="login-page">
+      <header className="login-hero">
+        <img className="login-hero__logo" src="/logo.svg" alt="BookLeaf Publishing" />
+        <h1>
+          The BookLeaf <span>Author Support</span> Portal
+        </h1>
+        <p>Track your books and royalties, and get answers from our team.</p>
+      </header>
+      <div className="login">
+        <div className="login__card card">
+          <h2 className="login__title">Sign in</h2>
+          <p className="muted">Use the email registered with BookLeaf.</p>
+          <form onSubmit={(e) => void onSubmit(e)} noValidate className="stack">
+            {formError && (
+              <div className="alert alert--error" role="alert">
+                {formError}
+              </div>
             )}
-          </FormField>
-          <FormField label="Password" error={fieldErrors.password}>
-            {(p) => (
-              <input
-                {...p}
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            )}
-          </FormField>
-          <button type="submit" className="btn btn--primary btn--block" disabled={submitting}>
-            {submitting ? "Signing in…" : "Sign in"}
-          </button>
-        </form>
-      </div>
+            <FormField label="Email" error={fieldErrors.email}>
+              {(p) => (
+                <input
+                  {...p}
+                  type="email"
+                  autoComplete="username"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoFocus
+                />
+              )}
+            </FormField>
+            <FormField label="Password" error={fieldErrors.password}>
+              {(p) => (
+                <input
+                  {...p}
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              )}
+            </FormField>
+            <button type="submit" className="btn btn--primary btn--block" disabled={submitting}>
+              {submitting ? "Signing in…" : "Sign in"}
+            </button>
+          </form>
+        </div>
 
-      {showDemoAccounts && (
-        <section className="login__demo card" aria-labelledby="demo-heading">
-          <h2 id="demo-heading">Demo accounts</h2>
-          <p className="muted small">Click to fill the form, then sign in.</p>
-          <ul className="demo-list">
-            {DEMO_ACCOUNTS.map((a) => (
-              <li key={a.email}>
-                <button
-                  type="button"
-                  className="demo-account"
-                  onClick={() => {
-                    setEmail(a.email);
-                    setPassword(a.password);
-                    setFieldErrors({});
-                    setFormError(null);
-                  }}
-                >
-                  <strong>{a.label}</strong>
-                  <span className="small muted">{a.email}</span>
-                  <span className="small">{a.note}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+        {showDemoAccounts && (
+          <section className="login__demo card" aria-labelledby="demo-heading">
+            <h2 id="demo-heading">Demo accounts</h2>
+            <p className="muted small">Click to fill the form, then sign in.</p>
+            <ul className="demo-list">
+              {DEMO_ACCOUNTS.map((a) => (
+                <li key={a.email}>
+                  <button
+                    type="button"
+                    className="demo-account"
+                    onClick={() => {
+                      setEmail(a.email);
+                      setPassword(a.password);
+                      setFieldErrors({});
+                      setFormError(null);
+                    }}
+                  >
+                    <strong>{a.label}</strong>
+                    <span className="small muted">{a.email}</span>
+                    <span className="small">{a.note}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
     </div>
   );
 }

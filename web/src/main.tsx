@@ -6,6 +6,11 @@ import { ApiError } from "./api/client";
 import { App } from "./App";
 import { AuthProvider } from "./auth/AuthProvider";
 import { ToastProvider } from "./components/Toast";
+import "@fontsource/lato/700.css";
+import "@fontsource/lato/900.css";
+import "@fontsource/mulish/400.css";
+import "@fontsource/mulish/600.css";
+import "@fontsource/mulish/700.css";
 import "./styles.css";
 
 const queryClient = new QueryClient({

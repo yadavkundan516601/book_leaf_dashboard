@@ -37,7 +37,8 @@ export function Layout({ nav, portal }: { nav: NavItem[]; portal: string }) {
       <header className="topbar">
         <div className="topbar__inner">
           <span className="brand">
-            BookLeaf <span className="brand__portal">{portal}</span>
+            <img className="brand__logo" src="/logo.svg" alt="BookLeaf Publishing" />
+            <span className="brand__portal">{portal}</span>
           </span>
           <nav className="nav" aria-label="Main">
             {nav.map((item) => (
