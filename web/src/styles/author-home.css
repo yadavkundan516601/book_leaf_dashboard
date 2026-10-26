@@ -1,0 +1,346 @@
+/* Author home (dashboard), Help & FAQ and My Books. Classes are prefixed "ah-".
+   This file is imported from the pages, which load before index.css in the bundle, so rules that
+   override base styles (.btn, headings) are scoped under .ah-page to win on specificity.
+   Corners are square on purpose: no border-radius anywhere. */
+
+.ah-page {
+  container: ah / inline-size;
+  display: grid;
+  gap: var(--gap);
+  min-width: 0;
+}
+.ah-muted {
+  color: var(--muted);
+}
+.ah-small {
+  font-size: 0.8rem;
+}
+.ah-link {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--blue-text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.ah-link:hover {
+  text-decoration: underline;
+}
+.ah-subtitle {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ---------- Welcome banner ---------- */
+/* Both gradient stops are at least as dark as --primary-strong, which carries white text at 4.6:1. */
+.ah-banner {
+  --ah-deep: color-mix(in srgb, var(--primary-strong) 70%, black);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px 32px;
+  padding: 28px;
+  background: linear-gradient(120deg, var(--primary-strong) 0%, var(--ah-deep) 100%);
+  color: var(--primary-contrast);
+  box-shadow: var(--shadow);
+}
+.ah-banner__text {
+  display: grid;
+  gap: 6px;
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.ah-page .ah-banner__title {
+  color: var(--primary-contrast);
+  font-size: clamp(1.4rem, 1.1rem + 1.4vw, 1.9rem);
+}
+.ah-banner__date {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.ah-banner__summary {
+  font-size: 1rem;
+  max-width: 60ch;
+}
+.ah-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.ah-page .ah-banner__btn--solid {
+  background: var(--primary-contrast);
+  border-color: var(--primary-contrast);
+  color: var(--ah-deep);
+}
+.ah-page .ah-banner__btn--solid:hover:not(:disabled) {
+  background: var(--primary-contrast);
+  border-color: var(--primary-contrast);
+  color: var(--ah-deep);
+  text-decoration: underline;
+}
+.ah-page .ah-banner__btn--outline {
+  background: transparent;
+  border-color: var(--primary-contrast);
+  color: var(--primary-contrast);
+}
+.ah-page .ah-banner__btn--outline:hover:not(:disabled) {
+  background: rgb(0 0 0 / 14%);
+  border-color: var(--primary-contrast);
+  color: var(--primary-contrast);
+}
+.ah-page .ah-banner .btn:focus-visible {
+  outline: 2px solid var(--primary-contrast);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+/* ---------- Next best action ---------- */
+.ah-next {
+  --ah-tone: var(--blue);
+  --ah-tone-soft: var(--blue-soft);
+  --ah-tone-text: var(--blue-text);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--ah-tone);
+  box-shadow: var(--shadow);
+}
+.ah-next--primary {
+  --ah-tone: var(--primary);
+  --ah-tone-soft: var(--primary-soft);
+  --ah-tone-text: var(--primary-hover);
+}
+.ah-next--warning {
+  --ah-tone: var(--warning);
+  --ah-tone-soft: var(--warning-soft);
+  --ah-tone-text: var(--warning-text);
+}
+.ah-next--success {
+  --ah-tone: var(--success);
+  --ah-tone-soft: var(--success-soft);
+  --ah-tone-text: var(--success-text);
+}
+.ah-next__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  background: var(--ah-tone-soft);
+  color: var(--ah-tone-text);
+}
+.ah-next__text {
+  display: grid;
+  gap: 4px;
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.ah-page .ah-next__title {
+  font-size: 1rem;
+}
+.ah-next__body {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.ah-next__link {
+  flex: none;
+}
+
+/* ---------- KPI row and card grid (container queries: the sidebar changes the usable width) ---------- */
+.ah-kpis {
+  display: grid;
+  gap: var(--gap);
+  grid-template-columns: minmax(0, 1fr);
+}
+.ah-grid {
+  display: grid;
+  gap: var(--gap);
+  grid-template-columns: minmax(0, 1fr);
+}
+@container ah (min-width: 540px) {
+  .ah-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container ah (min-width: 1000px) {
+  .ah-kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .ah-grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+  .ah-area-royalty {
+    grid-column: span 7;
+  }
+  .ah-area-books {
+    grid-column: span 5;
+  }
+  .ah-area-queries {
+    grid-column: span 8;
+  }
+  .ah-area-help {
+    grid-column: span 4;
+  }
+}
+
+/* ---------- Royalty by book ---------- */
+.ah-area-royalty {
+  container-type: inline-size;
+}
+.ah-royalty {
+  display: grid;
+  gap: 28px;
+  grid-template-columns: minmax(0, 1fr);
+}
+@container (min-width: 620px) {
+  .ah-royalty {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.ah-royalty__part {
+  min-width: 0;
+}
+
+/* ---------- Lists (books, queries) ---------- */
+.ah-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ah-list > li + li {
+  border-top: 1px solid var(--border);
+}
+.ah-book,
+.ah-query {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 12px 0;
+}
+.ah-book__main,
+.ah-query__main {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.ah-book__title {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.ah-book__state {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  flex: 0 1 180px;
+  min-width: 150px;
+  margin-left: auto;
+  text-align: right;
+}
+.ah-book__state .ui-progress {
+  width: 100%;
+}
+.ah-book__figure {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+.ah-book__caption {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.ah-query__ref {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.ah-query__subject {
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.ah-query__subject:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+.ah-query__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---------- Need help card ---------- */
+.ah-help-card {
+  display: flex;
+  flex-direction: column;
+}
+.ah-help-card__text {
+  margin-bottom: 16px;
+  color: var(--muted);
+}
+.ah-help-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+
+/* ---------- Empty and error states inside cards ---------- */
+.ah-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 24px 12px;
+  text-align: center;
+}
+.ah-page .ah-empty__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.ah-empty__body {
+  max-width: 48ch;
+  color: var(--muted);
+}
+
+/* ---------- Skeletons ---------- */
+.ah-skel-card {
+  display: grid;
+  gap: 12px;
+}
+.ah-skel-list__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+}
+.ah-skel-list__text {
+  display: grid;
+  flex: 1;
+  gap: 6px;
+}
+.ah-skel-chart {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+}
+.ah-skel-chart__lines {
+  display: grid;
+  flex: 1 1 160px;
+  gap: 10px;
+}
