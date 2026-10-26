@@ -11,7 +11,7 @@ import "@fontsource/lato/900.css";
 import "@fontsource/mulish/400.css";
 import "@fontsource/mulish/600.css";
 import "@fontsource/mulish/700.css";
-import "./styles.css";
+import "./styles/index.css";
 
 const queryClient = new QueryClient({
   defaultOptions: {

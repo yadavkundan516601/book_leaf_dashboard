@@ -11,6 +11,7 @@ import { MyBooksPage } from "./pages/author/MyBooksPage";
 import { MyTicketsPage } from "./pages/author/MyTicketsPage";
 import { NewTicketPage } from "./pages/author/NewTicketPage";
 import { LoginPage } from "./pages/LoginPage";
+import { UiKitPage } from "./pages/UiKitPage";
 
 const AUTHOR_NAV: NavItem[] = [
   { to: "/author/books", label: "My Books" },
@@ -74,6 +75,7 @@ export function App() {
         <Route path="tickets" element={<QueuePage />} />
         <Route path="tickets/:id" element={<AdminTicketPage />} />
       </Route>
+      {import.meta.env.DEV && <Route path="/ui-kit" element={<UiKitPage />} />}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
