@@ -1,7 +1,7 @@
 export type Theme = "light" | "dark";
 
 const STORAGE_KEY = "bl-theme";
-const THEME_COLOR: Record<Theme, string> = { light: "#f26979", dark: "#1c1415" };
+const THEME_COLOR: Record<Theme, string> = { light: "#f26979", dark: "#0c1a32" };
 
 /** The theme currently applied to the page (set before first paint by /theme-init.js). */
 export function currentTheme(): Theme {
