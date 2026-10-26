@@ -1,0 +1,689 @@
+/* Admin ticket workspace (/admin/tickets/:id). Tokens only: no hard-coded colours, sharp corners throughout. */
+
+.aw-page {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+  container-type: inline-size;
+}
+.aw-page .ui-page-header {
+  margin-bottom: 0;
+}
+.aw-page .ui-avatar,
+.aw-page .ui-skeleton,
+.aw-page .btn,
+.aw-page select,
+.aw-page textarea,
+.aw-page .ui-progress__track,
+.aw-page .ui-progress__fill {
+  border-radius: 0 !important;
+}
+
+/* ---------- Header ---------- */
+.aw-header {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.aw-header__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 4px;
+}
+.aw-ref {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.aw-header__opened {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.aw-sla {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border: 1px solid var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger-text);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+.aw-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+}
+.aw-header__status {
+  display: grid;
+  gap: 4px;
+  min-width: 160px;
+}
+.aw-header__status label {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Status stepper */
+.aw-stepper {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  list-style: none;
+}
+.aw-stepper__step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-bottom: 3px solid transparent;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.aw-stepper__step + .aw-stepper__step {
+  border-left: 1px solid var(--border);
+}
+.aw-stepper__marker {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border-strong);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+.aw-stepper__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.aw-stepper__step--done {
+  color: var(--text);
+}
+.aw-stepper__step--done .aw-stepper__marker {
+  border-color: var(--success);
+  background: var(--success-soft);
+  color: var(--success-text);
+}
+.aw-stepper__step--current {
+  border-bottom-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--text);
+}
+.aw-stepper__step--current .aw-stepper__marker {
+  border-color: var(--primary-strong);
+  background: var(--primary-strong);
+  color: var(--primary-contrast);
+}
+
+/* ---------- Layout: side column stacks below on narrow containers ---------- */
+.aw-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  min-width: 0;
+}
+@container (min-width: 960px) {
+  .aw-layout {
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+}
+@container (min-width: 1240px) {
+  .aw-layout {
+    grid-template-columns: minmax(0, 1fr) 380px;
+  }
+}
+.aw-main,
+.aw-side {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.aw-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.aw-card .ui-card-header {
+  margin-bottom: 0;
+}
+.aw-card__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.aw-section-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 900;
+}
+.aw-section-title label {
+  font: inherit;
+}
+.aw-subhead {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 4px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+.aw-note-line {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.aw-note-line--warning {
+  color: var(--warning-text);
+}
+.aw-danger-text {
+  color: var(--danger-text);
+  font-weight: 700;
+}
+.aw-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ---------- Messages ---------- */
+.aw-msg__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+}
+.aw-msg__who {
+  display: grid;
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: 1.25;
+}
+.aw-msg__who strong {
+  overflow-wrap: anywhere;
+}
+.aw-msg__role {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.aw-msg__when,
+.aw-msg__time {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.aw-msg__body {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.aw-query {
+  border-left: 3px solid var(--blue);
+}
+
+.aw-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.aw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+.aw-chip__kind {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.aw-chip--book {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+.aw-chip--kb {
+  padding: 1px 8px;
+  border-color: var(--blue);
+  background: var(--blue-soft);
+  color: var(--blue-text);
+  font-weight: 700;
+}
+
+.aw-thread-wrap {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.aw-thread-empty {
+  margin: 0;
+  padding: 16px;
+  border: 1px dashed var(--border-strong);
+  color: var(--muted);
+}
+.aw-thread {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.aw-msg {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.aw-msg--author {
+  margin-right: 48px;
+}
+.aw-msg--team {
+  margin-left: 48px;
+  border-left: 3px solid var(--primary);
+  background: var(--primary-soft);
+}
+
+/* ---------- Composer ---------- */
+.aw-composer__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+.aw-composer__shortcut {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.aw-composer__shortcut kbd {
+  padding: 0 5px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+.aw-composer__input {
+  width: 100%;
+  min-height: 200px;
+}
+.aw-composer__input[readonly] {
+  background: var(--surface-2);
+}
+.aw-composer__under {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-top: -6px;
+}
+.aw-counter {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+.aw-counter--over {
+  color: var(--danger-text);
+  font-weight: 800;
+}
+.aw-composer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.aw-composer__reason {
+  flex: 1 1 220px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.aw-draft {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  background: var(--surface-2);
+  font-size: 0.88rem;
+}
+.aw-draft--ai {
+  border-left-color: var(--blue);
+  background: var(--blue-soft);
+}
+.aw-draft--template {
+  border-left-color: var(--warning);
+  background: var(--warning-soft);
+}
+.aw-draft--loading {
+  align-items: center;
+  border-left-color: var(--blue);
+  background: linear-gradient(90deg, var(--surface-2), var(--blue-soft), var(--surface-2));
+  background-size: 200% 100%;
+  animation: aw-shimmer 1.4s infinite linear;
+}
+.aw-draft--error {
+  align-items: center;
+  border-left-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+.aw-draft--idle {
+  align-items: center;
+}
+.aw-draft__text {
+  display: grid;
+  flex: 1 1 260px;
+  gap: 4px;
+  min-width: 0;
+}
+.aw-draft__text p {
+  margin: 0;
+}
+.aw-draft__meta {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.aw-draft__notice {
+  color: var(--warning-text);
+}
+.aw-draft__stale {
+  color: var(--warning-text);
+  font-weight: 700;
+}
+.aw-draft__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+@keyframes aw-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aw-draft--loading {
+    animation: none;
+  }
+}
+
+.aw-inline-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger-text);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.aw-closed {
+  border-left: 3px solid var(--muted);
+}
+.aw-closed p {
+  margin: 0;
+}
+
+/* ---------- Side cards ---------- */
+.aw-fields {
+  display: grid;
+  gap: 12px;
+}
+.aw-fields label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.aw-fields select,
+.aw-side select {
+  width: 100%;
+}
+.aw-source {
+  padding: 0 5px;
+  border: 1px solid currentColor;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+.aw-source--ai {
+  color: var(--blue-text);
+}
+.aw-source--rules {
+  color: var(--warning-text);
+}
+.aw-source--admin {
+  color: var(--success-text);
+}
+.aw-suggestion {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 0.85rem;
+}
+.aw-suggestion p {
+  margin: 0;
+}
+.aw-suggestion__why {
+  color: var(--muted);
+}
+.aw-confidence {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+.aw-confidence .ui-progress {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.aw-facts {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.86rem;
+}
+.aw-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.aw-facts dt {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.aw-facts dd {
+  margin: 0;
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.aw-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.aw-person__text {
+  display: grid;
+  min-width: 0;
+}
+.aw-person__text a {
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+/* Internal notes: warm tint and dashed edge so they never pass for a reply. */
+.aw-notes {
+  border: 1px dashed var(--internal-border);
+  border-left: 4px solid var(--warning);
+  background: var(--internal-bg);
+}
+.aw-notes .ui-card-header__subtitle {
+  color: var(--warning-text);
+  font-weight: 800;
+}
+.aw-notes__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.aw-notes__item {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--internal-border);
+  background: var(--surface);
+  font-size: 0.88rem;
+}
+.aw-notes__meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 8px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.aw-notes__form {
+  display: grid;
+  gap: 6px;
+}
+.aw-notes__form textarea {
+  width: 100%;
+  min-height: 80px;
+}
+
+.aw-timeline {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0 0 0 14px;
+  border-left: 2px solid var(--border);
+  list-style: none;
+}
+.aw-timeline__item {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  padding: 0 0 12px;
+  font-size: 0.85rem;
+}
+.aw-timeline__item::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: -19px;
+  width: 8px;
+  height: 8px;
+  background: var(--muted);
+}
+.aw-timeline__item:first-child::before {
+  background: var(--primary);
+}
+.aw-timeline__item p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.aw-timeline__change {
+  display: block;
+  color: var(--muted);
+}
+.aw-timeline__item time {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+/* ---------- Loading, error and not-found states ---------- */
+.aw-skeleton-head {
+  display: grid;
+  gap: 10px;
+}
+.aw-skeleton-card {
+  gap: 10px;
+}
+.aw-state {
+  justify-items: start;
+}
+.aw-state__text {
+  max-width: 60ch;
+  margin: 0;
+  color: var(--muted);
+}
+.aw-state__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---------- Phones ---------- */
+@container (max-width: 560px) {
+  .aw-stepper {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .aw-stepper__step:nth-child(3) {
+    border-left: 0;
+  }
+  .aw-stepper__step:nth-child(n + 3) {
+    border-top: 1px solid var(--border);
+  }
+  .aw-msg--author {
+    margin-right: 0;
+  }
+  .aw-msg--team {
+    margin-left: 0;
+  }
+  .aw-header__actions,
+  .aw-header__status {
+    width: 100%;
+  }
+  .aw-composer__actions .btn {
+    flex: 1 1 auto;
+  }
+}
