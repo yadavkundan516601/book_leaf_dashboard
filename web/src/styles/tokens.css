@@ -13,6 +13,9 @@
   /* Brand */
   --primary: #f26979;
   --primary-hover: #dd4d5e;
+  /* Filled buttons carry white text: #d23f54 gives 4.6:1 (WCAG AA); the lighter brand coral stays for accents. */
+  --primary-strong: #d23f54;
+  --primary-strong-hover: #bb3246;
   --primary-soft: #fdeef0;
   --primary-contrast: #ffffff;
   --primary-ring: rgb(242 105 121 / 22%);
@@ -92,6 +95,8 @@
 
   --primary: #f26979;
   --primary-hover: #f78d99;
+  --primary-strong: #d23f54;
+  --primary-strong-hover: #e0485d;
   --primary-soft: rgb(242 105 121 / 15%);
   --primary-ring: rgb(242 105 121 / 35%);
 

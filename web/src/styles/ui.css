@@ -50,13 +50,13 @@
   background: var(--surface-2, #f8fafc);
 }
 .ui-btn--primary {
-  background: var(--primary, #f26979);
-  border-color: var(--primary, #f26979);
+  background: var(--primary-strong, #d23f54);
+  border-color: var(--primary-strong, #d23f54);
   color: #ffffff;
 }
 .ui-btn--primary:hover {
-  background: var(--primary-hover, #dd4d5e);
-  border-color: var(--primary-hover, #dd4d5e);
+  background: var(--primary-strong-hover, #bb3246);
+  border-color: var(--primary-strong-hover, #bb3246);
 }
 .ui-btn--danger {
   background: color-mix(in srgb, var(--danger, #ff6c6c) 75%, #000000);

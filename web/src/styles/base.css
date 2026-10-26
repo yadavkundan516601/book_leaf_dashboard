@@ -213,18 +213,18 @@ legend {
   cursor: not-allowed;
 }
 .btn--primary {
-  background: var(--primary);
-  border-color: var(--primary);
+  background: var(--primary-strong);
+  border-color: var(--primary-strong);
   color: var(--primary-contrast);
 }
 .btn--primary:hover:not(:disabled, [aria-disabled="true"]) {
-  background: var(--primary-hover);
-  border-color: var(--primary-hover);
+  background: var(--primary-strong-hover);
+  border-color: var(--primary-strong-hover);
   color: var(--primary-contrast);
   box-shadow: 0 4px 12px -2px rgb(242 105 121 / 45%);
 }
 .btn--primary:focus-visible {
-  border-color: var(--primary-hover);
+  border-color: var(--primary-strong-hover);
 }
 .btn--danger {
   background: var(--danger-strong);

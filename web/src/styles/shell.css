@@ -34,7 +34,7 @@
   z-index: 100;
   padding: 8px 14px;
   border-radius: var(--radius-control);
-  background: var(--primary);
+  background: var(--primary-strong);
   color: var(--primary-contrast);
   font-weight: 700;
   text-decoration: none;
@@ -229,7 +229,7 @@
   text-align: center;
 }
 .shell-nav__link[aria-current="page"] .shell-nav__badge {
-  background: var(--primary);
+  background: var(--primary-strong);
   color: var(--primary-contrast);
 }
 .shell-nav__badge--danger,

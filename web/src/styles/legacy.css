@@ -208,8 +208,8 @@
 }
 .toggle[aria-pressed="true"],
 .tab[aria-pressed="true"] {
-  background: var(--primary);
-  border-color: var(--primary);
+  background: var(--primary-strong);
+  border-color: var(--primary-strong);
   color: var(--primary-text);
 }
 .toggle--critical[aria-pressed="true"] {
