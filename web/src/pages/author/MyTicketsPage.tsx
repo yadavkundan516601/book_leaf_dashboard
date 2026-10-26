@@ -1,176 +1,192 @@
 import { TICKET_STATUSES, TICKET_STATUS_LABELS, type AuthorTicketSummaryDto, type TicketStatus } from "@bookleaf/shared";
+import { useId, useMemo } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useAuthorTickets } from "../../api/hooks";
-import { StatusBadge } from "../../components/Badge";
-import { EmptyState, ErrorState } from "../../components/EmptyState";
-import { BookIcon, ClipIcon } from "../../components/icons";
-import { CardBody, CardFacts, CardFigure, CardFoot, CardHead, CardStat, CardStats, CardTitle, Chip, Fact, ListCard } from "../../components/ListCard";
-import { Pagination } from "../../components/Pagination";
-import { Spinner } from "../../components/Spinner";
-import { formatDate, formatDateTime, formatRelative } from "../../lib/format";
+import { SearchIcon } from "../../components/icons";
+import { PageHeader, TabPanel, Tabs, type TabItem } from "../../components/ui";
+import "../../styles/author-tickets.css";
+import { useDocumentTitle } from "./tickets/hooks";
+import { EmptyCard, LoadError } from "./tickets/LoadError";
+import { hasNewReply, STATUS_MEANING } from "./tickets/status";
+import { TicketCard, TicketCardSkeletons } from "./tickets/TicketCard";
 
-const PAGE_SIZE = 20;
-const TABS: { value: TicketStatus | null; label: string }[] = [
-  { value: null, label: "All" },
-  ...TICKET_STATUSES.map((s) => ({ value: s, label: TICKET_STATUS_LABELS[s] })),
-];
+/** Authors have few tickets, so the list is fetched once and filtered/sorted in the browser. */
+const FETCH_LIMIT = 100;
+const TABS_ID = "my-tickets-status";
 
-/** The one-line answer to "what is happening with this query?". */
-function StateFigure({ ticket }: { ticket: AuthorTicketSummaryDto }) {
-  if (ticket.awaitingAuthor && (ticket.status === "open" || ticket.status === "in_progress")) {
-    return <CardFigure value="New reply" tone="primary" caption="BookLeaf has responded" />;
-  }
-  switch (ticket.status) {
-    case "open":
-      return <CardFigure value="Received" caption="We'll reply soon" />;
-    case "in_progress":
-      return <CardFigure value="With our team" caption="Being looked into" />;
-    case "resolved":
-      return <CardFigure value="Resolved" tone="success" caption="Reply to reopen" />;
-    case "closed":
-      return <CardFigure value="Closed" tone="muted" caption="No further replies" />;
-  }
+type TabId = "all" | TicketStatus;
+type SortId = "updated" | "oldest";
+
+const isTab = (v: string | null): v is TabId => v === "all" || TICKET_STATUSES.some((s) => s === v);
+const NEW_QUERY = "/author/tickets/new";
+
+function matches(t: AuthorTicketSummaryDto, needle: string) {
+  if (!needle) return true;
+  return [t.subject, t.reference, t.book?.title ?? "General / Account level"].some((v) => v.toLowerCase().includes(needle));
 }
-
-function TicketCard({ ticket }: { ticket: AuthorTicketSummaryDto }) {
-  const href = `/author/tickets/${ticket.id}`;
-  const needsAttention = ticket.awaitingAuthor && (ticket.status === "open" || ticket.status === "in_progress");
-  return (
-    <ListCard accent={needsAttention ? "new" : undefined}>
-      <CardHead
-        aside={
-          <time className="muted" dateTime={ticket.updatedAt} title={formatDateTime(ticket.updatedAt)}>
-            Updated {formatRelative(ticket.updatedAt)}
-          </time>
-        }
-      >
-        <span className="ref">{ticket.reference}</span>
-        <StatusBadge status={ticket.status} />
-      </CardHead>
-      <CardBody>
-        <CardTitle
-          title={
-            <Link to={href} className="lcard__link">
-              {ticket.subject}
-            </Link>
-          }
-          sub={ticket.book ? undefined : "General / Account level"}
-        />
-        <CardStats>
-          <CardStat label="Opened" value={formatDate(ticket.createdAt)} />
-          <CardStat label="Messages" value={ticket.messageCount} />
-        </CardStats>
-        <StateFigure ticket={ticket} />
-      </CardBody>
-      {(ticket.book || ticket.attachments.length > 0) && (
-        <CardFacts>
-          {ticket.book && (
-            <Fact icon={<BookIcon />} label="About">
-              <Chip>{ticket.book.title}</Chip>
-            </Fact>
-          )}
-          {ticket.attachments.length > 0 && (
-            <Fact icon={<ClipIcon />} label="Attachments">
-              {ticket.attachments.map((a) => (
-                <Chip key={a.name}>{a.name}</Chip>
-              ))}
-            </Fact>
-          )}
-        </CardFacts>
-      )}
-      <CardFoot
-        links={
-          <Link to={href} className="link-action">
-            View conversation
-          </Link>
-        }
-        action={
-          <Link to={href} className={needsAttention ? "btn btn--primary btn--sm" : "btn btn--sm"}>
-            {needsAttention ? "Read reply" : "Open ticket"}
-          </Link>
-        }
-      />
-    </ListCard>
-  );
-}
-
-const isStatus = (v: string | null): v is TicketStatus => TICKET_STATUSES.some((s) => s === v);
 
 export function MyTicketsPage() {
+  useDocumentTitle("My tickets");
+  const searchId = useId();
+  const sortId = useId();
   const [params, setParams] = useSearchParams();
-  const rawStatus = params.get("status");
-  const status = isStatus(rawStatus) ? rawStatus : null;
-  const page = Math.max(1, Number(params.get("page")) || 1);
+  const rawTab = params.get("status");
+  const tab: TabId = isTab(rawTab) ? rawTab : "all";
+  const query = params.get("q") ?? "";
+  const sort: SortId = params.get("sort") === "oldest" ? "oldest" : "updated";
 
-  const { data, isPending, error, refetch } = useAuthorTickets({
-    status: status ?? undefined,
-    sort: "updated",
-    page,
-    pageSize: PAGE_SIZE,
-  });
+  const { data, isPending, error, refetch, isRefetching } = useAuthorTickets({ pageSize: FETCH_LIMIT, sort: "updated" });
 
-  const setFilter = (next: { status?: TicketStatus | null; page?: number }) => {
-    const p = new URLSearchParams();
-    const s = next.status === undefined ? status : next.status;
-    if (s) p.set("status", s);
-    if (next.page && next.page > 1) p.set("page", String(next.page));
-    setParams(p);
+  const update = (next: Partial<{ status: TabId; q: string; sort: SortId }>) => {
+    const p = new URLSearchParams(params);
+    const set = (key: string, value: string | undefined, fallback: string) => {
+      if (value === undefined) return;
+      if (value && value !== fallback) p.set(key, value);
+      else p.delete(key);
+    };
+    set("status", next.status, "all");
+    set("q", next.q, "");
+    set("sort", next.sort, "updated");
+    setParams(p, { replace: true });
   };
 
-  return (
-    <div className="stack-lg">
-      <div className="page-header">
-        <h1>My Tickets</h1>
-        <Link className="btn btn--primary" to="/author/tickets/new">
-          New query
-        </Link>
-      </div>
+  const tickets = useMemo(() => data?.data ?? [], [data]);
+  const counts = useMemo(() => {
+    const c: Record<TabId, number> = { all: tickets.length, open: 0, in_progress: 0, resolved: 0, closed: 0 };
+    for (const t of tickets) c[t.status] += 1;
+    return c;
+  }, [tickets]);
 
-      <div className="tabs" role="group" aria-label="Filter by status">
-        {TABS.map((t) => (
-          <button
-            key={t.label}
-            type="button"
-            className="tab"
-            aria-pressed={status === t.value}
-            onClick={() => setFilter({ status: t.value, page: 1 })}
-          >
-            {t.label}
-          </button>
+  const needle = query.trim().toLowerCase();
+  const visible = useMemo(() => {
+    const list = tickets.filter((t) => (tab === "all" || t.status === tab) && matches(t, needle));
+    if (sort === "oldest") return [...list].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    return [...list].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }, [tickets, tab, needle, sort]);
+
+  const newReplies = tickets.filter(hasNewReply).length;
+  const tabs: TabItem<TabId>[] = [
+    { id: "all", label: "All", badge: data ? counts.all : undefined },
+    ...TICKET_STATUSES.map((s) => ({ id: s, label: TICKET_STATUS_LABELS[s], badge: data ? counts[s] : undefined })),
+  ];
+
+  const newQueryButton = (label = "New query") => (
+    <Link className="btn btn--primary" to={NEW_QUERY}>
+      {label}
+    </Link>
+  );
+
+  let body;
+  if (isPending) {
+    body = <TicketCardSkeletons />;
+  } else if (error) {
+    body = (
+      <LoadError title="We couldn't load your queries" error={error} onRetry={() => void refetch()} retrying={isRefetching} />
+    );
+  } else if (tickets.length === 0) {
+    body = (
+      <EmptyCard title="No queries yet" actions={newQueryButton("Ask your first question")}>
+        Questions about royalties, ISBNs, printing or your book's progress? Send us a query and follow the answer here.
+      </EmptyCard>
+    );
+  } else if (visible.length === 0 && needle) {
+    body = (
+      <EmptyCard
+        title={`Nothing matches “${query.trim()}”`}
+        actions={
+          <>
+            <button type="button" className="btn" onClick={() => update({ q: "" })}>
+              Clear search
+            </button>
+            {newQueryButton()}
+          </>
+        }
+      >
+        We searched subjects, references (like BL-12) and book titles
+        {tab === "all" ? "" : ` in ${TICKET_STATUS_LABELS[tab].toLowerCase()} queries`}.
+      </EmptyCard>
+    );
+  } else if (visible.length === 0 && tab !== "all") {
+    body = (
+      <EmptyCard
+        title={`No ${TICKET_STATUS_LABELS[tab].toLowerCase()} queries`}
+        actions={
+          <>
+            <button type="button" className="btn" onClick={() => update({ status: "all" })}>
+              Show all queries
+            </button>
+            {newQueryButton()}
+          </>
+        }
+      >
+        {STATUS_MEANING[tab].long}
+      </EmptyCard>
+    );
+  } else {
+    body = (
+      <div className="card-list">
+        {visible.map((t) => (
+          <TicketCard key={t.id} ticket={t} />
         ))}
       </div>
+    );
+  }
 
-      {isPending ? (
-        <Spinner label="Loading your tickets…" />
-      ) : error ? (
-        <ErrorState error={error} onRetry={() => void refetch()} />
-      ) : data.data.length === 0 ? (
-        status ? (
-          <EmptyState title={`No ${TICKET_STATUS_LABELS[status].toLowerCase()} tickets`}>
-            Try another tab to see the rest of your queries.
-          </EmptyState>
-        ) : (
-          <EmptyState
-            title="No queries yet"
-            action={
-              <Link className="btn btn--primary" to="/author/tickets/new">
-                Ask a question
-              </Link>
-            }
-          >
-            Questions about royalties, ISBNs, printing or your book's progress? Send us a query and track the answer here.
-          </EmptyState>
-        )
-      ) : (
-        <>
-          <div className="card-list">
-            {data.data.map((t) => (
-              <TicketCard key={t.id} ticket={t} />
-            ))}
+  return (
+    <div className="at-page">
+      <PageHeader
+        breadcrumbs={[{ label: "Dashboard", to: "/author/overview" }, { label: "My tickets" }]}
+        title="My tickets"
+        subtitle={
+          newReplies > 0
+            ? `${newReplies} ${newReplies === 1 ? "query has" : "queries have"} a new reply from BookLeaf Support.`
+            : "Every question you've sent us, and where each one stands."
+        }
+        actions={newQueryButton()}
+      />
+
+      <div className="at-toolbar">
+        <Tabs id={TABS_ID} label="Filter by status" tabs={tabs} value={tab} onChange={(status) => update({ status })} />
+        <div className="at-toolbar__controls">
+          <div className="at-search">
+            <label htmlFor={searchId} className="ui-sr-only">
+              Search your queries
+            </label>
+            <span className="at-search__icon" aria-hidden="true">
+              <SearchIcon />
+            </span>
+            <input
+              id={searchId}
+              type="search"
+              value={query}
+              placeholder="Search subject, BL-number or book"
+              onChange={(e) => update({ q: e.target.value })}
+            />
           </div>
-          <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onChange={(p) => setFilter({ page: p })} />
-        </>
+          <div className="at-sort">
+            <label htmlFor={sortId}>Sort</label>
+            <select id={sortId} value={sort} onChange={(e) => update({ sort: e.target.value === "oldest" ? "oldest" : "updated" })}>
+              <option value="updated">Recently updated</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {data && data.total > FETCH_LIMIT && (
+        <p className="at-note" role="note">
+          Showing your {FETCH_LIMIT} most recent queries.
+        </p>
       )}
+
+      <TabPanel tabsId={TABS_ID} value={tab}>
+        {needle && visible.length > 0 && (
+          <p className="at-results" aria-live="polite">
+            {visible.length} {visible.length === 1 ? "query matches" : "queries match"} “{query.trim()}”
+          </p>
+        )}
+        {body}
+      </TabPanel>
     </div>
   );
 }
