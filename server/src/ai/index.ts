@@ -1,0 +1,41 @@
+/**
+ * Public surface of the AI layer. The rest of the app depends only on these
+ * interfaces, never on the LLM SDK, so the provider can be swapped or faked
+ * in tests and the app keeps working when the AI is unavailable.
+ *
+ * Contract: nothing here throws because the LLM failed. Classification falls
+ * back to deterministic rules; drafts fall back to KB-based templates. Callers
+ * only see errors for genuinely bad input (e.g. unknown ticket id -> NotFound).
+ */
+import type { DraftDto } from "@bookleaf/shared";
+
+export interface ClassificationQueue {
+  /** Fire-and-forget: classify the ticket in the background, persist, emit `ticket.classified`. */
+  enqueue(ticketId: string): void;
+  /** Re-enqueue tickets left in `pending` state (e.g. after a restart). Returns how many. */
+  recoverPending(): Promise<number>;
+  /** Run classification now (admin "re-run AI" action). Overwrites only non-admin fields. */
+  reclassify(ticketId: string): Promise<void>;
+  /** Resolves once in-flight work is done (tests, graceful shutdown). */
+  drain(): Promise<void>;
+}
+
+export interface DraftService {
+  /** Returns the cached draft for the ticket's current state, generating one if needed. */
+  getDraft(ticketId: string, opts: { regenerate: boolean }): Promise<DraftDto>;
+}
+
+export interface AiStatus {
+  /** Key configured, not disabled, and circuit breaker closed. */
+  available(): boolean;
+  models(): { classify: string; draft: string };
+}
+
+export interface AiLayer {
+  classification: ClassificationQueue;
+  drafts: DraftService;
+  status: AiStatus;
+}
+
+export { createAiLayer } from "./create.js";
+export { estimateCostUsd } from "./pricing.js";
