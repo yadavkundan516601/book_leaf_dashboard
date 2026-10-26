@@ -1,8 +1,23 @@
+import { useMemo } from "react";
 import { Link, Navigate, Route, Routes } from "react-router";
+import { useAdminStats, useAuthorTickets } from "./api/hooks";
 import { homeFor, useAuth } from "./auth/AuthProvider";
 import { RequireRole } from "./auth/RequireRole";
 import { EmptyState } from "./components/EmptyState";
-import { Layout, type NavItem } from "./components/Layout";
+import {
+  AlarmIcon,
+  BooksIcon,
+  ChatIcon,
+  CodeIcon,
+  DashboardIcon,
+  HelpIcon,
+  InboxIcon,
+  PlusCircleIcon,
+  UserCheckIcon,
+  UserQuestionIcon,
+} from "./components/icons";
+import { Layout, type NavGroup } from "./components/Layout";
+import { ComingSoon } from "./components/shell/ComingSoon";
 import { Spinner } from "./components/Spinner";
 import { AdminTicketPage } from "./pages/admin/AdminTicketPage";
 import { QueuePage } from "./pages/admin/QueuePage";
@@ -13,13 +28,71 @@ import { NewTicketPage } from "./pages/author/NewTicketPage";
 import { LoginPage } from "./pages/LoginPage";
 import { UiKitPage } from "./pages/UiKitPage";
 
-const AUTHOR_NAV: NavItem[] = [
-  { to: "/author/books", label: "My Books" },
-  { to: "/author/tickets", label: "My Tickets", end: true },
-  { to: "/author/tickets/new", label: "New Query" },
-];
+/**
+ * "SLA breached" shortcut. The queue has no SLA filter yet, so this approximates it with the unresolved
+ * critical/high tickets (the ones with the tightest first-response windows); the badge itself is the exact
+ * `slaBreached` count from the stats endpoint.
+ */
+const SLA_SHORTCUT = "/admin/tickets?status=open&status=in_progress&priority=critical&priority=high";
 
-const ADMIN_NAV: NavItem[] = [{ to: "/admin/tickets", label: "Ticket Queue" }];
+function AdminLayout() {
+  const { data: stats } = useAdminStats();
+  const groups = useMemo<NavGroup[]>(
+    () => [
+      { label: "Overview", items: [{ to: "/admin/dashboard", label: "Dashboard", icon: <DashboardIcon /> }] },
+      {
+        label: "Support",
+        items: [
+          {
+            to: "/admin/tickets",
+            label: "Ticket Queue",
+            icon: <InboxIcon />,
+            badge: stats ? stats.byStatus.open + stats.byStatus.in_progress : null,
+          },
+          { to: "/admin/tickets?assignee=me", label: "Assigned to me", icon: <UserCheckIcon /> },
+          {
+            to: "/admin/tickets?assignee=unassigned",
+            label: "Unassigned",
+            icon: <UserQuestionIcon />,
+            badge: stats?.unassignedOpen ?? null,
+          },
+          {
+            to: SLA_SHORTCUT,
+            label: "SLA breached",
+            icon: <AlarmIcon />,
+            badge: stats?.slaBreached ?? null,
+            badgeTone: "danger",
+          },
+        ],
+      },
+      { label: "Resources", items: [{ to: "/api/docs", label: "API docs", icon: <CodeIcon />, external: true }] },
+    ],
+    [stats],
+  );
+  return <Layout groups={groups} portal="admin" />;
+}
+
+function AuthorLayout() {
+  // One list fetch, refreshed by the usual realtime invalidations; counts tickets with an unread team reply.
+  const { data: tickets } = useAuthorTickets({ pageSize: 100, sort: "updated" });
+  const awaiting = tickets?.data.filter((t) => t.awaitingAuthor).length ?? null;
+  const groups = useMemo<NavGroup[]>(
+    () => [
+      { label: "Overview", items: [{ to: "/author/overview", label: "Dashboard", icon: <DashboardIcon /> }] },
+      {
+        label: "My account",
+        items: [
+          { to: "/author/books", label: "My Books", icon: <BooksIcon /> },
+          { to: "/author/tickets", label: "My Tickets", icon: <ChatIcon />, badge: awaiting },
+          { to: "/author/tickets/new", label: "New Query", icon: <PlusCircleIcon /> },
+        ],
+      },
+      { label: "Help", items: [{ to: "/author/help", label: "Help & FAQ", icon: <HelpIcon /> }] },
+    ],
+    [awaiting],
+  );
+  return <Layout groups={groups} portal="author" />;
+}
 
 function RootRedirect() {
   const { user, isLoading } = useAuth();
@@ -53,25 +126,37 @@ export function App() {
         path="/author"
         element={
           <RequireRole role="author">
-            <Layout nav={AUTHOR_NAV} portal="Author" />
+            <AuthorLayout />
           </RequireRole>
         }
       >
         <Route index element={<Navigate to="books" replace />} />
+        <Route
+          path="overview"
+          element={<ComingSoon title="Dashboard" backTo="/author/books" backLabel="Go to My Books" />}
+        />
         <Route path="books" element={<MyBooksPage />} />
         <Route path="tickets" element={<MyTicketsPage />} />
         <Route path="tickets/new" element={<NewTicketPage />} />
         <Route path="tickets/:id" element={<AuthorTicketPage />} />
+        <Route
+          path="help"
+          element={<ComingSoon title="Help & FAQ" backTo="/author/tickets/new" backLabel="Ask our team a question" />}
+        />
       </Route>
       <Route
         path="/admin"
         element={
           <RequireRole role="admin">
-            <Layout nav={ADMIN_NAV} portal="Support" />
+            <AdminLayout />
           </RequireRole>
         }
       >
         <Route index element={<Navigate to="tickets" replace />} />
+        <Route
+          path="dashboard"
+          element={<ComingSoon title="Dashboard" backTo="/admin/tickets" backLabel="Open the ticket queue" />}
+        />
         <Route path="tickets" element={<QueuePage />} />
         <Route path="tickets/:id" element={<AdminTicketPage />} />
       </Route>
