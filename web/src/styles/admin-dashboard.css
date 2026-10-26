@@ -1,0 +1,474 @@
+/* Admin dashboard (pages/admin/DashboardPage.tsx). Tokens only; class names are prefixed "ad-".
+   Layout uses container queries on the page so it reacts to the space left by the sidebar, not the viewport. */
+
+.ad-page {
+  container: ad-page / inline-size;
+  min-width: 0;
+}
+
+/* ---- 12-column grid: 1 column on phones, 2 on tablets, the full layout from 1040px of content ---- */
+.ad-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--gap, 24px);
+  min-width: 0;
+}
+.ad-span-3,
+.ad-span-4,
+.ad-span-8,
+.ad-span-12 {
+  grid-column: span 12;
+  min-width: 0;
+}
+
+@container ad-page (min-width: 640px) {
+  .ad-span-3,
+  .ad-span-4 {
+    grid-column: span 6;
+  }
+  /* An odd card out at the end of the 2-column layout takes the full row instead of leaving a hole. */
+  .ad-grid > .ad-span-4:last-child {
+    grid-column: span 12;
+  }
+}
+
+@container ad-page (min-width: 1040px) {
+  .ad-span-3 {
+    grid-column: span 3;
+  }
+  .ad-span-4,
+  .ad-grid > .ad-span-4:last-child {
+    grid-column: span 4;
+  }
+  .ad-span-8 {
+    grid-column: span 8;
+  }
+}
+
+.ad-card {
+  display: flex;
+  flex-direction: column;
+}
+.ad-span-3 > .ui-kpi {
+  height: 100%;
+}
+
+/* ---- Shared bits ---- */
+.ad-muted {
+  color: var(--muted);
+}
+.ad-text-danger {
+  color: var(--danger-text);
+}
+.ad-subheading {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ad-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--danger);
+  background: var(--danger-soft);
+  color: var(--text);
+}
+.ad-error__text {
+  margin: 0;
+  flex: 1 1 200px;
+  font-size: 0.9rem;
+}
+
+.ad-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 8px;
+  text-align: center;
+}
+.ad-empty p {
+  margin: 0;
+  max-width: 420px;
+}
+.ad-empty__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+/* ---- All active tickets ---- */
+.ad-tickets {
+  container: ad-tickets / inline-size;
+  min-width: 0;
+}
+.ad-tickets__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ad-tickets__head {
+  display: none;
+}
+
+.ad-ticket {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 12px 8px;
+  border-top: 1px solid var(--border);
+  min-width: 0;
+}
+.ad-ticket:hover {
+  background: var(--surface-2);
+}
+.ad-ticket__main {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1 1 100%;
+  min-width: 0;
+}
+.ad-ticket__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ad-ticket__link {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+}
+/* Stretched link: the whole row is the click target, while the SLA HelpTip stays its own button above it. */
+.ad-ticket__link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.ad-ticket:hover .ad-ticket__link {
+  color: var(--primary-strong);
+}
+.ad-ticket__link:focus-visible {
+  outline: none;
+}
+.ad-ticket__link:focus-visible::after {
+  box-shadow: inset 0 0 0 2px var(--primary);
+}
+.ad-ticket__sub {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.ad-ticket__cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 0.85rem;
+}
+.ad-ticket__sla {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.ad-ticket__sla .ui-helptip {
+  position: relative;
+  z-index: 1;
+}
+.ad-ticket__name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ad-ticket__category {
+  max-width: 100%;
+}
+.ad-ticket__category .category-chip {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* Stacked layout: subject on top, then the facts in one wrapping line with the date pushed right. */
+.ad-ticket__date {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+@container ad-tickets (min-width: 720px) {
+  .ad-tickets__head,
+  .ad-ticket {
+    display: grid;
+    grid-template-columns:
+      minmax(0, 2.6fr) minmax(0, 1.2fr) minmax(0, 1.3fr) minmax(0, 1.4fr) minmax(0, 0.8fr)
+      minmax(0, 0.9fr);
+    gap: 12px;
+    align-items: center;
+  }
+  .ad-tickets__head {
+    padding: 0 8px 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .ad-ticket__status {
+    flex-wrap: wrap;
+  }
+  .ad-ticket__date {
+    margin-left: 0;
+  }
+}
+
+/* ---- Tickets by status ---- */
+.ad-donut-skeleton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ---- Best agent of the week ---- */
+.ad-best {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+.ad-best .ui-avatar {
+  width: 72px;
+  height: 72px;
+  font-size: 1.5rem;
+  margin-bottom: 8px;
+}
+.ad-best p {
+  margin: 0;
+}
+.ad-best__greeting {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.ad-best__name {
+  font-size: 0.85rem;
+}
+.ad-best__figure {
+  margin-top: 8px;
+}
+.ad-best__number {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--success-text);
+}
+.ad-best__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.ad-best__stats dt {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.ad-best__stats dd {
+  margin: 2px 0 0;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+.ad-best__others {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+/* ---- Open tickets by category ---- */
+.ad-category-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+}
+.ad-chip-link {
+  display: inline-block;
+  max-width: 100%;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 0.78rem;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.ad-chip-link:hover {
+  border-color: var(--primary);
+}
+.ad-chip-link:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ---- Needs attention ---- */
+.ad-allclear {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  background: var(--success-soft);
+  color: var(--success-text);
+  font-weight: 700;
+}
+.ad-allclear__mark {
+  font-size: 1.1rem;
+}
+.ad-attention {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ad-attention__item {
+  --ad-tone: var(--muted);
+  --ad-tone-text: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--ad-tone);
+  color: var(--text);
+  text-decoration: none;
+  min-width: 0;
+}
+.ad-attention__item:hover {
+  background: var(--surface-2);
+}
+.ad-attention__item:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.ad-attention__item--danger {
+  --ad-tone: var(--danger);
+  --ad-tone-text: var(--danger-text);
+}
+.ad-attention__item--warning {
+  --ad-tone: var(--warning);
+  --ad-tone-text: var(--warning-text);
+}
+.ad-attention__item--info {
+  --ad-tone: var(--blue);
+  --ad-tone-text: var(--blue-text);
+}
+.ad-attention__item--success {
+  --ad-tone: var(--success);
+  --ad-tone-text: var(--success-text);
+}
+.ad-attention__count {
+  flex: none;
+  min-width: 2.5ch;
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ad-tone-text);
+}
+.ad-attention__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.ad-attention__label {
+  font-weight: 700;
+}
+.ad-attention__hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.ad-attention__go {
+  flex: none;
+  color: var(--muted);
+}
+
+/* ---- AI assistant ---- */
+.ad-ai__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ad-ai__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+  margin: 0;
+}
+.ad-ai__fact--wide {
+  grid-column: 1 / -1;
+}
+.ad-ai__fact dt {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.ad-ai__fact dd {
+  margin: 2px 0 0;
+  font-weight: 700;
+  font-size: 1.05rem;
+  overflow-wrap: anywhere;
+}
+.ad-ai__model {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+.ad-ai__rates {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.ad-rate {
+  display: grid;
+  gap: 6px;
+}
+.ad-rate__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+.ad-rate__value {
+  margin-left: auto;
+  font-weight: 700;
+}
