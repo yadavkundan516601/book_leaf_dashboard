@@ -1,8 +1,11 @@
 import {
   TICKET_CATEGORIES,
+  TICKET_CATEGORY_LABELS,
   TICKET_PRIORITIES,
+  TICKET_PRIORITY_LABELS,
   TICKET_SORTS,
   TICKET_STATUSES,
+  TICKET_STATUS_LABELS,
   type TicketCategory,
   type TicketPriority,
   type TicketSort,
@@ -80,6 +83,96 @@ export function toListQuery(f: QueueFilters): TicketListParams {
   };
 }
 
-/** True when anything other than sort/page narrows the queue away from its default view. */
-export const hasCustomFilters = (params: URLSearchParams) =>
-  [...params.keys()].some((k) => k !== "page" && k !== "sort");
+// ---------------------------------------------------------------------------
+// Quick views (the tabs above the queue)
+// ---------------------------------------------------------------------------
+
+/** The facets a quick view sets; search text, sort and page are left alone so they combine with any view. */
+type ViewFacets = Pick<QueueFilters, "statuses" | "priorities" | "category" | "assignee" | "from" | "to">;
+
+const NO_FACETS: ViewFacets = { statuses: DEFAULT_STATUSES, priorities: [], category: null, assignee: null, from: "", to: "" };
+
+export const QUICK_VIEWS = [
+  { id: "active", label: "All active", facets: NO_FACETS },
+  { id: "mine", label: "Assigned to me", facets: { ...NO_FACETS, assignee: "me" } },
+  { id: "unassigned", label: "Unassigned", facets: { ...NO_FACETS, assignee: "unassigned" } },
+  { id: "urgent", label: "Critical & high", facets: { ...NO_FACETS, priorities: ["critical", "high"] } },
+  { id: "resolved", label: "Resolved", facets: { ...NO_FACETS, statuses: ["resolved"] } },
+  { id: "all", label: "All", facets: { ...NO_FACETS, statuses: [] } },
+] as const satisfies readonly { id: string; label: string; facets: ViewFacets }[];
+
+export type QuickViewId = (typeof QUICK_VIEWS)[number]["id"];
+
+/** Filter patch that switches to a quick view (keeps search and sort, back to page 1). */
+export function quickViewPatch(id: QuickViewId): Partial<QueueFilters> {
+  const view = QUICK_VIEWS.find((v) => v.id === id) ?? QUICK_VIEWS[0];
+  return { ...view.facets, statuses: [...view.facets.statuses], priorities: [...view.facets.priorities], page: 1 };
+}
+
+/** The quick view whose facets exactly match the current filters, or null for a custom combination. */
+export function matchQuickView(f: QueueFilters): QuickViewId | null {
+  const match = QUICK_VIEWS.find(
+    ({ facets }) =>
+      sameSet(f.statuses, facets.statuses) &&
+      sameSet(f.priorities, facets.priorities) &&
+      f.category === facets.category &&
+      f.assignee === facets.assignee &&
+      f.from === facets.from &&
+      f.to === facets.to,
+  );
+  return match?.id ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Active-filter chips and the "Filters" badge
+// ---------------------------------------------------------------------------
+
+export interface FilterChip {
+  key: string;
+  label: string;
+  /** Patch that removes just this filter. */
+  remove: Partial<QueueFilters>;
+}
+
+/** One removable chip per active filter, in the order the advanced panel lists them. */
+export function activeFilterChips(f: QueueFilters, assigneeName: (id: string) => string): FilterChip[] {
+  const chips: FilterChip[] = [];
+  if (f.statuses.length === 0) {
+    chips.push({ key: "status-all", label: "Status: any", remove: { statuses: DEFAULT_STATUSES } });
+  } else if (!sameSet(f.statuses, DEFAULT_STATUSES)) {
+    for (const s of f.statuses) {
+      const rest = f.statuses.filter((x) => x !== s);
+      // Removing the last status goes back to the default (active) view rather than to "any status".
+      chips.push({ key: `status-${s}`, label: `Status: ${TICKET_STATUS_LABELS[s]}`, remove: { statuses: rest.length ? rest : DEFAULT_STATUSES } });
+    }
+  }
+  for (const p of f.priorities) {
+    chips.push({ key: `priority-${p}`, label: `Priority: ${TICKET_PRIORITY_LABELS[p]}`, remove: { priorities: f.priorities.filter((x) => x !== p) } });
+  }
+  if (f.category) chips.push({ key: "category", label: `Category: ${TICKET_CATEGORY_LABELS[f.category]}`, remove: { category: null } });
+  if (f.assignee) {
+    const who = f.assignee === "me" ? "me" : f.assignee === "unassigned" ? "nobody" : assigneeName(f.assignee);
+    chips.push({ key: "assignee", label: f.assignee === "unassigned" ? "Unassigned" : `Assigned to ${who}`, remove: { assignee: null } });
+  }
+  if (f.from) chips.push({ key: "from", label: `Created from ${f.from}`, remove: { from: "" } });
+  if (f.to) chips.push({ key: "to", label: `Created to ${f.to}`, remove: { to: "" } });
+  if (f.q.trim()) chips.push({ key: "q", label: `Search: “${f.q.trim()}”`, remove: { q: "" } });
+  return chips;
+}
+
+/** How many advanced-panel controls differ from their defaults (shown as a badge on the Filters button). */
+export function advancedFilterCount(f: QueueFilters): number {
+  return [
+    !sameSet(f.statuses, DEFAULT_STATUSES),
+    f.priorities.length > 0,
+    f.category !== null,
+    f.assignee !== null,
+    f.from !== "",
+    f.to !== "",
+    f.sort !== "urgency",
+  ].filter(Boolean).length;
+}
+
+/** Inline validation for the created-date range; null when valid. */
+export const dateRangeError = (from: string, to: string) =>
+  from && to && from > to ? "“Created from” must be on or before “Created to”." : null;
