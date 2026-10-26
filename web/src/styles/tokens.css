@@ -1,1 +1,121 @@
-/* tokens.css: see docs/ui-brief.md */
+/* Design tokens (see docs/ui-brief.md). Light theme on :root, navy dark theme on [data-theme="dark"].
+   The "legacy aliases" block keeps token names used by legacy.css working until pages are migrated. */
+:root {
+  /* Surfaces and text */
+  --bg: #f3f6f9;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --border: #e6ebf2;
+  --border-strong: #d3dce8; /* form controls: a hairline is too faint to find an input by */
+  --text: #172b4c;
+  --muted: #566f9e;
+
+  /* Brand */
+  --primary: #f26979;
+  --primary-hover: #dd4d5e;
+  --primary-soft: #fdeef0;
+  --primary-contrast: #ffffff;
+  --primary-ring: rgb(242 105 121 / 22%);
+
+  /* Accents and status colours. *-soft are tinted backgrounds, *-text are AA-readable text tones. */
+  --blue: #3762ea;
+  --blue-soft: #ebf0fd;
+  --blue-text: #2a4fc7;
+  --cyan: #00baff;
+  --success: #04a08b;
+  --success-soft: #e3f6f3;
+  --success-text: #037a6a;
+  --warning: #f6b749;
+  --warning-soft: #fef4e2;
+  --warning-text: #925c00;
+  --danger: #ff6c6c;
+  --danger-soft: #ffeded;
+  --danger-text: #d12f3a;
+  --danger-strong: #e5484d; /* solid fills carrying white text */
+  --orange: #f08a3c;
+  --orange-soft: #fff1e6;
+  --orange-text: #b54a0a;
+
+  /* Shape and depth */
+  --radius: 12px;
+  --radius-control: 8px;
+  --radius-pill: 999px;
+  --shadow: 0 1px 2px rgb(23 43 76 / 4%), 0 4px 16px rgb(23 43 76 / 6%);
+  --shadow-lg: 0 2px 6px rgb(23 43 76 / 6%), 0 16px 40px rgb(23 43 76 / 14%);
+  --focus-ring: 0 0 0 3px var(--primary-ring);
+
+  /* Type */
+  --font-body: "Mulish", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Lato", "Mulish", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Shell metrics */
+  --sidebar-w: 260px;
+  --rail-w: 72px;
+  --topbar-h: 64px;
+  --content-max: 1440px;
+  --gap: 24px;
+
+  --scrollbar: #c5d0de;
+  --logo-plate: transparent;
+
+  /* ---- Legacy aliases (names used by legacy.css and older pages) ---- */
+  --primary-light: #f78d99;
+  --primary-text: var(--primary-contrast);
+  --accent: var(--warning);
+  --info: var(--blue-text);
+  --info-bg: var(--blue-soft);
+  --success-bg: var(--success-soft);
+  --warning-bg: var(--warning-soft);
+  --orange-bg: var(--orange-soft);
+  --danger-bg: var(--danger-soft);
+  --internal-bg: #fffaf0;
+  --internal-border: #f3d48a;
+  --radius-sm: var(--radius-control);
+  --pill: var(--radius-pill);
+  --shadow-hover: var(--shadow-lg);
+  --font: var(--font-body);
+  --font-heading: var(--font-display);
+
+  color-scheme: light;
+}
+
+/* Dark theme: navy surfaces, coral stays the primary. */
+:root[data-theme="dark"] {
+  --bg: #0c1a32;
+  --surface: #112547;
+  --surface-2: #162f5b;
+  --border: #1b3a70;
+  --border-strong: #26498a;
+  --text: #e6ecf7;
+  --muted: #8cade4;
+
+  --primary: #f26979;
+  --primary-hover: #f78d99;
+  --primary-soft: rgb(242 105 121 / 15%);
+  --primary-ring: rgb(242 105 121 / 35%);
+
+  --blue: #5b80f0;
+  --blue-soft: rgb(55 98 234 / 22%);
+  --blue-text: #9db4ff;
+  --success-soft: rgb(4 160 139 / 18%);
+  --success-text: #3fd8bf;
+  --warning-soft: rgb(246 183 73 / 15%);
+  --warning-text: #f8c56b;
+  --danger-soft: rgb(255 108 108 / 15%);
+  --danger-text: #ff9494;
+  --orange-soft: rgb(240 138 60 / 16%);
+  --orange-text: #ffb27a;
+
+  --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 4px 16px rgb(0 0 0 / 22%);
+  --shadow-lg: 0 2px 6px rgb(0 0 0 / 35%), 0 16px 40px rgb(0 0 0 / 40%);
+
+  --scrollbar: #2b4f8c;
+  /* The logo artwork is dark-on-light, so it sits on a white plate on dark surfaces. */
+  --logo-plate: #ffffff;
+
+  --internal-bg: rgb(246 183 73 / 8%);
+  --internal-border: #6b5a1c;
+
+  color-scheme: dark;
+}
