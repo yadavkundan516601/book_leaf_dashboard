@@ -37,7 +37,12 @@ export function createApp(ctx: AppContext) {
         res.setHeader("x-request-id", id);
         return id;
       },
-      autoLogging: { ignore: (req) => req.url === "/api/v1/health" },
+      // Only API traffic, and only the fields worth keeping (no headers/cookies).
+      autoLogging: { ignore: (req) => !req.url?.startsWith("/api/") || req.url === "/api/v1/health" },
+      serializers: {
+        req: (req: { id: unknown; method: string; url: string }) => ({ id: req.id, method: req.method, url: req.url }),
+        res: (res: { statusCode: number }) => ({ statusCode: res.statusCode }),
+      },
     }),
   );
   app.use(
