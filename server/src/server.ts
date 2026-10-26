@@ -17,12 +17,19 @@ ctx.ai.classification
   .then((n) => n > 0 && ctx.log.info({ count: n }, "re-queued pending classifications"))
   .catch((err) => ctx.log.error({ err }, "pending classification recovery failed"));
 
+// Periodic sweep: retries classifications that failed on a transient DB error (capped by attempts).
+const recoveryTimer = setInterval(() => {
+  ctx.ai.classification.recoverPending().catch((err) => ctx.log.error({ err }, "pending classification sweep failed"));
+}, 60_000);
+recoveryTimer.unref();
+
 let shuttingDown = false;
 async function shutdown(signal: string) {
   if (shuttingDown) return;
   shuttingDown = true;
   ctx.log.info({ signal }, "shutting down");
   const force = setTimeout(() => process.exit(1), 10_000).unref();
+  clearInterval(recoveryTimer);
   server.close();
   server.closeAllConnections(); // SSE streams are long-lived
   await ctx.ai.classification.drain().catch(() => {});

@@ -51,7 +51,8 @@ export function authRouter(ctx: AppContext): Router {
       maxAge: ctx.env.JWT_TTL_HOURS * 3_600_000,
       path: "/",
     });
-    const body: { user: UserDto; token: string } = { user: toUserDto(user), token };
+    // The token is only delivered as an httpOnly cookie, never in the body where page scripts could read it.
+    const body: { user: UserDto } = { user: toUserDto(user) };
     res.json(body);
   });
 

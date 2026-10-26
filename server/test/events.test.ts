@@ -2,7 +2,7 @@ import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { ADMIN_EMAIL, ADMIN_PASSWORD, AUTHOR_PASSWORD, createTestApp, type TestApp } from "./helpers.js";
+import { ADMIN_EMAIL, ADMIN_PASSWORD, AUTHOR_PASSWORD, createTestApp, sessionToken, type TestApp } from "./helpers.js";
 import { fakeAi } from "./fake-ai.js";
 
 let t: TestApp;
@@ -23,7 +23,7 @@ afterAll(async () => {
 
 async function tokenFor(email: string, password: string) {
   const res = await request(t.app).post("/api/v1/auth/login").send({ email, password });
-  return res.body.token as string;
+  return sessionToken(res);
 }
 
 interface Frame {

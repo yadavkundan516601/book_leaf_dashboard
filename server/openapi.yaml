@@ -6,8 +6,9 @@ info:
     REST API behind the BookLeaf author support portal.
 
     **Authentication.** `POST /auth/login` sets an httpOnly `bl_session` cookie (used by the web app and
-    the SSE stream) and also returns the same JWT in the body for API clients, which send it as
-    `Authorization: Bearer <token>`.
+    the SSE stream). The token is deliberately not returned in the body; API clients can either keep the
+    cookie (Postman/curl cookie jar) or send the cookie's JWT value as `Authorization: Bearer <token>`.
+    State-changing requests carrying a foreign `Origin` header are rejected with 403.
 
     **Roles.** `author` users only ever see their own books and tickets (other authors' resources return
     `404`, not `403`, so ids can't be probed). `admin` users (BookLeaf staff) see the full queue, internal
@@ -67,7 +68,7 @@ paths:
     post:
       tags: [Auth]
       summary: Sign in
-      description: Sets the `bl_session` cookie and returns the session token. Rate limited per IP.
+      description: Sets the httpOnly `bl_session` cookie and returns the signed-in user. Rate limited per IP.
       security: []
       requestBody:
         required: true
@@ -85,10 +86,9 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [user, token]
+                required: [user]
                 properties:
                   user: { $ref: "#/components/schemas/User" }
-                  token: { type: string, description: "JWT for `Authorization: Bearer`." }
         "400": { $ref: "#/components/responses/ValidationError" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "429": { $ref: "#/components/responses/RateLimited" }

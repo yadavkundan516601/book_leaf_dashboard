@@ -131,7 +131,7 @@ describe("draft service: graceful degradation", () => {
     expect(draft.notice).toMatch(/^AI drafting is temporarily unavailable \(.+\) — this is a policy-based template/);
     expect(draft.kbSections).toContain("royalty");
     expect(draft.body).toMatch(/^Hi Ananya,/);
-    for (const phrase of ["₹2,546", "2026-11-14", "45 days", "₹1,000", "bank details", "48 hours"]) expect(draft.body).toContain(phrase);
+    for (const phrase of ["₹2,546", "14 Nov 2026", "45 days", "₹1,000", "bank details", "48 hours"]) expect(draft.body).toContain(phrase);
     expect(draft.body.endsWith(SIGN_OFF)).toBe(true);
     expect(await storedDrafts(id)).toHaveLength(0);
 

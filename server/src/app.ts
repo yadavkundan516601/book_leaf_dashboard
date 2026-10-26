@@ -13,6 +13,7 @@ import { randomUUID } from "node:crypto";
 import type { AppContext } from "./context.js";
 import { authenticate } from "./middleware/auth.js";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler.js";
+import { originGuard } from "./middleware/origin-guard.js";
 import { authRouter } from "./modules/auth/routes.js";
 import { authorsRouter } from "./modules/authors/routes.js";
 import { booksRouter } from "./modules/books/routes.js";
@@ -72,6 +73,7 @@ export function createApp(ctx: AppContext) {
       next();
     });
   }
+  app.use("/api", originGuard(ctx.env.CORS_ORIGIN));
   app.use(express.json({ limit: "100kb" }));
   app.use(cookieParser());
 

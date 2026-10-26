@@ -7,7 +7,7 @@
  * rewrites. Plain text, like the AI output.
  */
 import type { TicketCategory } from "@bookleaf/shared";
-import { ROYALTY_PAYOUT_THRESHOLD_INR, ROYALTY_PAYOUT_WINDOW_DAYS } from "../lib/dates.js";
+import { ROYALTY_PAYOUT_THRESHOLD_INR, ROYALTY_PAYOUT_WINDOW_DAYS, formatLongDate } from "../lib/dates.js";
 import { daysBetween, firstName, inr, isPublished, type BookRow, type TicketContext } from "./ticket-context.js";
 
 export const SIGN_OFF = "Warm regards,\nBookLeaf Author Support";
@@ -55,7 +55,7 @@ function royalty(ctx: TicketContext): string[] {
     const last = b.lastRoyaltyPayoutDate;
     overdue = b.royaltyPending > 0 && (!last || daysBetween(last, ctx.today) > OVERDUE_AFTER_DAYS);
     paras.push(
-      `Thank you for writing in about the royalties for ${quoted(b)}, and I'm sorry for the worry this has caused. I've checked your account: ${quoted(b)} has ${b.totalCopiesSold} copies sold and ${inr(b.royaltyPending)} in royalties pending, and ${last ? `the last payout on this book was made on ${last}` : "no payout has been made on this book yet"}.`,
+      `Thank you for writing in about the royalties for ${quoted(b)}, and I'm sorry for the worry this has caused. I've checked your account: ${quoted(b)} has ${b.totalCopiesSold} copies sold and ${inr(b.royaltyPending)} in royalties pending, and ${last ? `the last payout on this book was made on ${formatLongDate(last)}` : "no payout has been made on this book yet"}.`,
     );
   } else if (b) {
     paras.push(
@@ -66,7 +66,7 @@ function royalty(ctx: TicketContext): string[] {
   }
 
   paras.push(
-    `BookLeaf calculates royalties quarterly and pays them within ${ROYALTY_PAYOUT_WINDOW_DAYS} days of each quarter closing, so your next payout is due by ${r.nextPayoutDueBy}.`,
+    `BookLeaf calculates royalties quarterly and pays them within ${ROYALTY_PAYOUT_WINDOW_DAYS} days of each quarter closing, so your next payout is due by ${formatLongDate(r.nextPayoutDueBy)}.`,
   );
 
   paras.push(
@@ -81,8 +81,8 @@ function royalty(ctx: TicketContext): string[] {
 
   paras.push(
     overdue && r.meetsThreshold
-      ? "A payout on this book looks overdue, and that is on us. I've escalated it to our accounts team, and we will get back to you with a resolution within 48 hours."
-      : `If you have not received your payout by ${r.nextPayoutDueBy}, just reply here and we will escalate it straight away, with a resolution within 48 hours.`,
+      ? "A payout on this book looks overdue, and that is on us. We are escalating it to our accounts team now and will get back to you with a resolution within 48 hours."
+      : `If you have not received your payout by ${formatLongDate(r.nextPayoutDueBy)}, just reply here and we will escalate it straight away, with a resolution within 48 hours.`,
   );
   return paras;
 }
@@ -93,7 +93,7 @@ function isbn(ctx: TicketContext): string[] {
   const onRecord = b?.isbn ? ` The ISBN on our records for this title is ${b.isbn}.` : "";
   return [
     `Thank you for flagging this. A problem with ${subject} is a serious data issue, and we treat it as high priority.${onRecord}`,
-    "I've escalated it to our production team, who will check the ISBN and listing details on every platform against our records and correct anything that does not match. We will get back to you with an update within 48 hours.",
+    "We are escalating it to our production team, who will check the ISBN and listing details on every platform against our records and correct anything that does not match. We will get back to you with an update within 48 hours.",
     "If you can, please reply with a screenshot of the listing and a photo of the ISBN on your printed copy. It will help the team resolve this faster.",
   ];
 }
@@ -121,7 +121,7 @@ function distribution(ctx: TicketContext): string[] {
   const listed = b?.availableOn.length ? ` On our side, ${title} is set up for ${listJoin(b.availableOn)}.` : "";
   return [
     `Thank you for letting us know, and I'm sorry ${title} is not showing as available.${listed}`,
-    "This is usually a stock sync issue between our warehouse and the platform. I've asked our distribution team to trigger a re-sync, and the listing should be live and purchasable again within 24–48 hours. We will confirm here once it is back, and if it is not, we will escalate it straight away.",
+    "This is usually a stock sync issue between our warehouse and the platform. We are asking our distribution team to trigger a re-sync, and the listing should be live and purchasable again within 24–48 hours. We will confirm here once it is back, and if it is not, we will escalate it straight away.",
   ];
 }
 
@@ -134,7 +134,7 @@ function production(ctx: TicketContext): string[] {
     ];
   }
   if (isPublished(b)) {
-    const since = b.publicationDate ? ` since ${b.publicationDate}` : "";
+    const since = b.publicationDate ? ` since ${formatLongDate(b.publicationDate)}` : "";
     const where = b.availableOn.length ? `, and it is listed on ${listJoin(b.availableOn)}` : "";
     return [
       `Thank you for checking in. Good news: ${quoted(b)} has been Published & Live${since}${where}.`,
@@ -151,7 +151,7 @@ function production(ctx: TicketContext): string[] {
       : "";
   return [
     `Thank you for checking in on ${quoted(b)}, and I understand how eager you are to see it published. It is currently at the ${stage} stage.${ahead}`,
-    `I've asked our production team to review where it stands.${commonDelay} We will come back to you with a specific updated timeline within 48 hours.`,
+    `We are checking with our production team on where it stands.${commonDelay} We will come back to you with a specific updated timeline within 48 hours.`,
   ];
 }
 

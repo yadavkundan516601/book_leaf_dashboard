@@ -44,7 +44,7 @@ The login page has one-click demo-account buttons. Hide them with `VITE_SHOW_DEM
 
 | Command | What it does |
 |---|---|
-| `npm test` | Server integration tests (73 tests, in-memory Postgres, fake LLM, never hits the network) |
+| `npm test` | Server integration tests (76 tests, in-memory Postgres, fake LLM, never hits the network) |
 | `npm run typecheck` | Typechecks `shared`, `server` and `web` |
 | `npm run build` | Builds the SPA and bundles the server (`server/dist`) |
 | `npm start` | Runs the production bundle |
@@ -79,7 +79,7 @@ web/     React 19 + Vite + React Router + TanStack Query
 | **PostgreSQL + Drizzle** | Relational data (authors → books → tickets → messages) with enums, arrays and transactions. Drizzle keeps SQL visible and typed. PGlite gives reviewers a zero-setup local DB with identical SQL. |
 | **Separate `ticket_notes` table** | Internal notes can't leak through a forgotten `WHERE` clause: author queries never touch that table. |
 | **Effective vs suggested classification** | Tickets keep both what the AI said and what the admin set, so we can measure AI agreement (shown on the dashboard). |
-| **httpOnly cookie JWT** | Not readable by page scripts, and works with `EventSource`, which can't send headers. A Bearer token is also accepted for API clients. |
+| **httpOnly cookie JWT** | Not readable by page scripts (never returned in a response body), and works with `EventSource`, which can't send headers. A Bearer header is also accepted for API clients. CSRF: SameSite=Lax plus an Origin check on state-changing requests. |
 | **SSE for real time** | One-way server→client updates, auto-reconnect, works over plain HTTP. Events are thin (`{type, ticketId}`) and clients refetch through RBAC'd endpoints, so the stream can't leak data. Polling fallback on disconnect. |
 | **AI behind an interface** | Routes depend on `AiLayer`, not the SDK. The provider can be swapped or faked, and the app works with AI disabled. |
 
@@ -146,7 +146,7 @@ Base path `/api/v1`. Every route except `/health` and `/auth/login` requires a s
 | Method | Path | Role | Description |
 |---|---|---|---|
 | GET | `/health` | public | DB + AI status |
-| POST | `/auth/login` | public | `{email, password}` → sets session cookie, returns `{user, token}` (rate-limited) |
+| POST | `/auth/login` | public | `{email, password}` → sets the httpOnly session cookie, returns `{user}` (rate-limited) |
 | POST | `/auth/logout` | any | Clears the session |
 | GET | `/auth/me` | any | Current user |
 | GET | `/books` | author / admin | Author: own books + royalty summary (next payout date, threshold). Admin: all (`?authorId=`) |

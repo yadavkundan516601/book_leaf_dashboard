@@ -9,8 +9,8 @@ function DraftBanner({ draft }: { draft: DraftDto }) {
   if (draft.source === "template") {
     return (
       <div className="alert alert--warning small" role="status">
-        <strong>Template reply.</strong> {draft.notice ?? "The AI assistant is unavailable, so a standard template was used."}{" "}
-        Personalise it before sending.
+        <strong>Template reply.</strong>{" "}
+        {draft.notice ?? "The AI assistant is unavailable, so a policy-based template was used. Personalise it before sending."}
       </div>
     );
   }
@@ -68,9 +68,10 @@ export function ReplyComposer({ ticket }: { ticket: AdminTicketDto }) {
     });
   };
 
-  // Auto-draft once, the first time this ticket is seen in a repliable state (the parent keys us by ticket id).
+  // Auto-draft once, the first time this ticket is seen while it still needs a reply (the parent keys us by
+  // ticket id). Resolved tickets get a draft only on demand, so browsing history doesn't spend LLM calls.
   useEffect(() => {
-    if (requestedOnce.current || ticket.status === "closed") return;
+    if (requestedOnce.current || (ticket.status !== "open" && ticket.status !== "in_progress")) return;
     requestedOnce.current = true;
     requestDraft({ regenerate: false, replace: false });
   }, [ticket.status]);

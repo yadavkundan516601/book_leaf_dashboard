@@ -57,3 +57,11 @@ export async function loginAs(app: Express, email: string, password = email.ends
   if (res.status !== 200) throw new Error(`login failed for ${email}: ${res.status} ${JSON.stringify(res.body)}`);
   return agent;
 }
+
+/** Extracts the session JWT from a login response's Set-Cookie header (API-client style auth). */
+export function sessionToken(res: { headers: Record<string, unknown> }): string {
+  const cookies = ([] as string[]).concat((res.headers["set-cookie"] as string[] | string | undefined) ?? []);
+  const match = cookies.join(";").match(/bl_session=([^;]+)/);
+  if (!match?.[1]) throw new Error("no session cookie in response");
+  return match[1];
+}

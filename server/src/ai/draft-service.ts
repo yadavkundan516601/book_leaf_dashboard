@@ -70,6 +70,8 @@ function draftInputHash(env: Env, ctx: TicketContext, category: TicketCategory, 
     },
     authorPending: ctx.royalty.totalPending,
     nextPayoutDueBy: ctx.royalty.nextPayoutDueBy,
+    // The prompt states today's date and "N days since last payout", so a draft is valid for one day.
+    today: ctx.today,
     messages: messages.map((m) => m.id),
   };
   return createHash("sha256").update(JSON.stringify(material)).digest("hex");

@@ -28,6 +28,10 @@ export function errorHandler(log: Logger): ErrorRequestHandler {
     } else if (err?.type === "entity.too.large") {
       status = 413;
       body = { error: { code: "PAYLOAD_TOO_LARGE", message: "Request body is too large", requestId: requestId(req) } };
+    } else if (Number.isInteger(err?.status) && err.status >= 400 && err.status < 500 && err.expose) {
+      // Other client errors raised by middleware (e.g. 415 unsupported charset from the body parser).
+      status = err.status;
+      body = { error: { code: "BAD_REQUEST", message: String(err.message), requestId: requestId(req) } };
     }
 
     if (status >= 500) log.error({ err, requestId: requestId(req) }, "unhandled error");

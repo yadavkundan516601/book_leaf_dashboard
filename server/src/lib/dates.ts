@@ -2,6 +2,12 @@
 
 export const toIsoDate = (d: Date) => d.toISOString().slice(0, 10);
 
+/** "2026-11-14" -> "14 Nov 2026" (for author-facing text). */
+export function formatLongDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+}
+
 /** Last day of the quarter containing `d`. */
 export function quarterEnd(d: Date): Date {
   const q = Math.floor(d.getUTCMonth() / 3);
@@ -29,8 +35,11 @@ export function royaltyCycle(today: Date) {
   );
   const previousPayoutDueBy = addDays(previousQuarterEnd, ROYALTY_PAYOUT_WINDOW_DAYS);
   // If the previous quarter's payout window is still open, that's the next payout.
+  // Compare calendar days: on the due date itself the previous payout is still the next one.
   const nextPayoutDueBy =
-    today <= previousPayoutDueBy ? previousPayoutDueBy : addDays(currentQuarterEnd, ROYALTY_PAYOUT_WINDOW_DAYS);
+    toIsoDate(today) <= toIsoDate(previousPayoutDueBy)
+      ? previousPayoutDueBy
+      : addDays(currentQuarterEnd, ROYALTY_PAYOUT_WINDOW_DAYS);
   return {
     currentQuarterEnd: toIsoDate(currentQuarterEnd),
     previousQuarterEnd: toIsoDate(previousQuarterEnd),

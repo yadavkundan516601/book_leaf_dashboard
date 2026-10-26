@@ -6,9 +6,8 @@
  * sends cookies automatically but cannot set an Authorization header. A
  * Bearer header is still accepted for API clients (Postman, scripts).
  *
- * CSRF: SameSite=Lax blocks cross-site POST/PATCH carrying the cookie, and the
- * JSON body parser rejects non-JSON content types, so classic form-post CSRF
- * cannot reach a state-changing handler.
+ * CSRF: SameSite=Lax keeps the cookie off cross-site POST/PATCH requests, and
+ * originGuard rejects state-changing requests from foreign origins.
  */
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 import jwt from "jsonwebtoken";

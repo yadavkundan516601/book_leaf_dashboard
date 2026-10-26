@@ -79,7 +79,10 @@ const VALUE_LABELS: Record<string, string> = {
 };
 
 /** Human label for an enum value stored in the activity log; falls back to the raw value. */
-export const labelForValue = (value: string) => VALUE_LABELS[value] ?? value;
+export const labelForValue = (value: string) =>
+  VALUE_LABELS[value] ??
+  // Composite values such as "royalty_payments/high via ai" -> "Royalty & Payments · High via ai"
+  value.replace(/[a-z]+(?:_[a-z]+)*/g, (w) => VALUE_LABELS[w] ?? w).replace(/\//g, " · ");
 
 /** "status_changed" / "ticket.status_changed" -> "Status changed". */
 export function humanizeEventType(type: string): string {
