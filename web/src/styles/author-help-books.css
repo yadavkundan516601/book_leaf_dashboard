@@ -1,0 +1,192 @@
+/* Help & FAQ and My Books. Classes are prefixed "hb-" and scoped under .hb-page where they override base
+   styles (this file loads before index.css in the bundle). Colours come from tokens only; corners are square. */
+
+.hb-page {
+  container: hb / inline-size;
+  display: grid;
+  gap: var(--gap);
+  min-width: 0;
+}
+.hb-muted {
+  color: var(--muted);
+}
+.hb-link {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--blue-text);
+  text-decoration: none;
+}
+.hb-link:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Toolbar: search, topic/status tabs, sort ---------- */
+.hb-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  margin-bottom: 16px;
+  min-width: 0;
+}
+.hb-search {
+  position: relative;
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.hb-search__icon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  display: inline-flex;
+  color: var(--muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.hb-page .hb-search input {
+  padding-left: 36px;
+}
+/* Six topics do not fit a phone in one row: let the segmented control wrap instead of overflowing. */
+.hb-page .hb-toolbar .ui-tabs--segmented {
+  display: flex;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.hb-sort {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.hb-page .hb-sort select {
+  width: auto;
+  min-width: 170px;
+}
+
+/* ---------- FAQ ---------- */
+.hb-faq__answer {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  max-width: 75ch;
+}
+.hb-faq__answer p {
+  margin: 0;
+}
+
+/* ---------- Empty and error states ---------- */
+.hb-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 32px 12px;
+  text-align: center;
+}
+.hb-page .hb-empty__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.hb-empty__body {
+  max-width: 52ch;
+  margin: 0;
+  color: var(--muted);
+}
+.hb-empty__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* ---------- Production stepper ---------- */
+.hb-stepper {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding-bottom: 4px;
+}
+.hb-stepper:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.hb-stepper__list {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(124px, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.hb-stepper__step {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 0 12px 4px 0;
+}
+/* Connector from this marker to the next one. */
+.hb-stepper__step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 15px;
+  left: 32px;
+  right: 0;
+  height: 2px;
+  background: var(--border-strong);
+}
+.hb-stepper__marker {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--primary);
+  background: var(--primary-soft);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+.hb-stepper__step:last-child .hb-stepper__marker {
+  border-color: var(--success);
+  background: var(--success-soft);
+}
+.hb-stepper__name {
+  font-weight: 700;
+  line-height: 1.3;
+}
+.hb-stepper__note {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+/* ---------- Still stuck ---------- */
+.hb-stuck {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  border-left: 4px solid var(--primary);
+}
+.hb-stuck__text {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.hb-stuck .ui-card-header {
+  margin-bottom: 6px;
+}
+.hb-stuck__text p {
+  margin: 0;
+  max-width: 70ch;
+}
+.hb-stuck__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
