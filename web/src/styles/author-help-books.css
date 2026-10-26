@@ -190,3 +190,113 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* ---------- My Books: royalty summary ---------- */
+/* The KPI row is the dashboard's RoyaltyKpis (.ah-kpis); its column count follows this page's container. */
+@container hb (min-width: 540px) {
+  .hb-page .ah-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container hb (min-width: 1000px) {
+  .hb-page .ah-kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.hb-royalty {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.hb-callout {
+  --hb-tone: var(--blue);
+  --hb-tone-soft: var(--blue-soft);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--hb-tone);
+  background: var(--hb-tone-soft);
+  color: var(--text);
+}
+.hb-callout--warning {
+  --hb-tone: var(--warning);
+  --hb-tone-soft: var(--warning-soft);
+}
+.hb-callout--success {
+  --hb-tone: var(--success);
+  --hb-tone-soft: var(--success-soft);
+}
+.hb-callout__text {
+  display: grid;
+  gap: 6px;
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.hb-page .hb-callout__title {
+  margin: 0;
+  font-size: 1rem;
+}
+.hb-callout__text p {
+  margin: 0;
+  max-width: 90ch;
+}
+
+/* ---------- My Books: list ---------- */
+.hb-books {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.hb-page .hb-section-title {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.hb-books .hb-toolbar {
+  margin-bottom: 0;
+}
+.hb-page .hb-book__title {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+/* Long production statuses must wrap rather than push the card wider than a phone. */
+.hb-page .lcard__name .ui-pill {
+  white-space: normal;
+}
+.hb-skel-book {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+.hb-skel-book__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+/* The card's three-column body is sized for wide screens; stack it whenever the content area is narrow
+   (the sidebar takes width, so a viewport media query alone is not enough). */
+@container hb (max-width: 820px) {
+  .hb-page .lcard__body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .hb-page .lfigure {
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+    text-align: left;
+  }
+}
+@container hb (max-width: 520px) {
+  .hb-page .hb-sort {
+    flex: 1 1 100%;
+  }
+  .hb-page .hb-sort select {
+    flex: 1;
+    min-width: 0;
+  }
+}

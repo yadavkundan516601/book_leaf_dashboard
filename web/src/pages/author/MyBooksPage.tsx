@@ -1,210 +1,193 @@
-import type { BookDto, RoyaltySummaryDto } from "@bookleaf/shared";
+import type { BookDto } from "@bookleaf/shared";
+import { useEffect, useId, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { useMyBooks } from "../../api/hooks";
-import { BookStatusBadge } from "../../components/Badge";
-import { EmptyState, ErrorState } from "../../components/EmptyState";
-import { GlobeIcon, PrinterIcon } from "../../components/icons";
-import { CardBody, CardFacts, CardFigure, CardFoot, CardHead, CardStat, CardStats, CardTitle, Chip, Fact, ListCard } from "../../components/ListCard";
-import { Spinner } from "../../components/Spinner";
-import { formatCount, formatDate, formatINR } from "../../lib/format";
-import { stageProgress } from "../../lib/productionStage";
+import { SearchIcon } from "../../components/icons";
+import { Card, PageHeader, TabPanel, Tabs, type TabItem } from "../../components/ui";
+import "../../styles/author-home.css";
+import "../../styles/author-help-books.css";
+import { BookCard } from "./books/BookCard";
+import { inTab, matchesQuery, SORT_LABELS, sortBooks, type BookSort, type BookTab } from "./books/bookList";
+import { BookCardSkeletons } from "./books/BookSkeletons";
+import { RoyaltySummary } from "./books/RoyaltySummary";
+import { KpiSkeletons } from "./overview/Skeletons";
 
-function RoyaltySummary({ royalty }: { royalty: RoyaltySummaryDto }) {
-  const { totalEarned, totalPaid, totalPending, payoutThreshold, meetsThreshold } = royalty;
+const TABS_ID = "hb-book-status";
+const TAB_LABELS: Record<BookTab, string> = { all: "All", live: "Live", production: "In production" };
+const SORTS = Object.keys(SORT_LABELS) as BookSort[];
+const isSort = (v: string): v is BookSort => v in SORT_LABELS;
+
+/** Search, status tabs and sort over the author's books, with an empty state for "nothing matches". */
+function BookList({ books }: { books: readonly BookDto[] }) {
+  const searchId = useId();
+  const sortId = useId();
+  const [query, setQuery] = useState("");
+  const [tab, setTab] = useState<BookTab>("all");
+  const [sort, setSort] = useState<BookSort>("title");
+
+  const matching = useMemo(() => books.filter((b) => matchesQuery(b, query)), [books, query]);
+  const visible = useMemo(() => sortBooks(matching.filter((b) => inTab(b, tab)), sort), [matching, tab, sort]);
+
+  const tabs: TabItem<BookTab>[] = (Object.keys(TAB_LABELS) as BookTab[]).map((id) => ({
+    id,
+    label: TAB_LABELS[id],
+    badge: matching.filter((b) => inTab(b, id)).length,
+  }));
+
+  const trimmed = query.trim();
+  const otherTabMatches = tab !== "all" && matching.length > 0;
+
   return (
-    <section aria-label="Royalty summary" className="stack">
-      <div className="stat-grid">
-        <div className="stat card">
-          <span className="stat__label">Total earned</span>
-          <span className="stat__value">{formatINR(totalEarned)}</span>
+    <section className="hb-books" aria-labelledby="hb-books-title">
+      <h2 id="hb-books-title" className="hb-section-title">
+        Your books <span className="hb-muted">({books.length})</span>
+      </h2>
+      <div className="hb-toolbar">
+        <div className="hb-search">
+          <label htmlFor={searchId} className="ui-sr-only">
+            Search your books by title or ISBN
+          </label>
+          <span className="hb-search__icon" aria-hidden="true">
+            <SearchIcon size={16} />
+          </span>
+          <input
+            id={searchId}
+            type="search"
+            placeholder="Search by title or ISBN"
+            autoComplete="off"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
         </div>
-        <div className="stat card">
-          <span className="stat__label">Paid to you</span>
-          <span className="stat__value">{formatINR(totalPaid)}</span>
-        </div>
-        <div className="stat card">
-          <span className="stat__label">Pending</span>
-          <span className="stat__value">{formatINR(totalPending)}</span>
-        </div>
-        <div className="stat card">
-          <span className="stat__label">Next payout due by</span>
-          <span className="stat__value">{formatDate(royalty.nextPayoutDueBy)}</span>
+        <Tabs id={TABS_ID} label="Filter books by status" tabs={tabs} value={tab} onChange={setTab} />
+        <div className="hb-sort">
+          <label htmlFor={sortId}>Sort by</label>
+          <select id={sortId} value={sort} onChange={(e) => isSort(e.target.value) && setSort(e.target.value)}>
+            {SORTS.map((s) => (
+              <option key={s} value={s}>
+                {SORT_LABELS[s]}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
-      <div className={meetsThreshold || totalPending === 0 ? "alert alert--info" : "alert alert--warning"}>
-        <p>
-          Royalties are calculated every quarter and paid within 45 days of the quarter closing. The current quarter
-          closes on {formatDate(royalty.currentQuarterEnd)}.
-        </p>
-        {totalPending === 0 ? (
-          <p>You have nothing pending right now: every royalty earned so far has been paid.</p>
-        ) : meetsThreshold ? (
-          <p>
-            Your pending {formatINR(totalPending)} will be included in the next payout, due by{" "}
-            {formatDate(royalty.nextPayoutDueBy)}.
-          </p>
+      <p className="ui-sr-only" role="status">
+        {`Showing ${visible.length} of ${books.length} ${books.length === 1 ? "book" : "books"}`}
+      </p>
+      <TabPanel tabsId={TABS_ID} value={tab}>
+        {visible.length > 0 ? (
+          <div className="card-list">
+            {visible.map((book) => (
+              <BookCard key={book.id} book={book} />
+            ))}
+          </div>
         ) : (
-          <p>
-            Your pending {formatINR(totalPending)} is below the {formatINR(payoutThreshold)} payout minimum, so it rolls
-            over to the next quarter and is paid once your balance reaches {formatINR(payoutThreshold)}.
-          </p>
+          <Card>
+            <div className="hb-empty">
+              <h3 className="hb-empty__title">
+                {trimmed
+                  ? `No books match "${trimmed}"${tab === "all" ? "" : ` under ${TAB_LABELS[tab]}`}`
+                  : tab === "live"
+                    ? "None of your books are live yet"
+                    : "None of your books are in production right now"}
+              </h3>
+              <p className="hb-empty__body">
+                {trimmed
+                  ? otherTabMatches
+                    ? "Some of your books match under a different status."
+                    : "Check the spelling, or search by ISBN instead of the title."
+                  : tab === "live"
+                    ? "Books appear here once they are published and live. Your other books show their production stage."
+                    : "All of your books are published. You'll find them under Live."}
+              </p>
+              <div className="hb-empty__actions">
+                {tab !== "all" && (
+                  <button type="button" className="btn btn--sm" onClick={() => setTab("all")}>
+                    Show all books
+                  </button>
+                )}
+                {trimmed && (
+                  <button type="button" className="btn btn--sm" onClick={() => setQuery("")}>
+                    Clear search
+                  </button>
+                )}
+              </div>
+            </div>
+          </Card>
         )}
-      </div>
+      </TabPanel>
     </section>
   );
 }
 
-/** Published books: sales and royalty numbers. */
-function RoyaltyStats({ book }: { book: BookDto }) {
-  const neverPaid = book.totalRoyaltyEarned > 0 && !book.lastRoyaltyPayoutDate;
-  return (
-    <CardStats>
-      <CardStat label="Copies sold" value={formatCount(book.totalCopiesSold)} />
-      <CardStat label="Royalty earned" value={formatINR(book.totalRoyaltyEarned)} />
-      <CardStat
-        label="Paid out"
-        value={neverPaid ? "Nothing yet" : formatINR(book.royaltyPaid)}
-        tone={neverPaid ? "muted" : undefined}
-        sub={book.lastRoyaltyPayoutDate ? `Last paid ${formatDate(book.lastRoyaltyPayoutDate)}` : undefined}
-      />
-    </CardStats>
-  );
-}
-
-/** Books still in production: where they are in the pipeline instead of empty royalty columns. */
-function ProductionProgress({ status }: { status: string }) {
-  const progress = stageProgress(status);
-  if (!progress) return <p className="muted">Sales and royalties appear once your book is live.</p>;
-  return (
-    <div className="progress">
-      <div className="progress__label">
-        <strong>{progress.stage}</strong>
-        <span className="muted">
-          Step {progress.step} of {progress.total}
-        </span>
-      </div>
-      <div
-        className="progress__track"
-        role="progressbar"
-        aria-label="Production progress"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={progress.percent}
-      >
-        <div className="progress__bar" style={{ width: `${progress.percent}%` }} />
-      </div>
-    </div>
-  );
-}
-
-function PendingFigure({ book }: { book: BookDto }) {
-  if (!book.isPublished) return <CardFigure value="In production" tone="muted" caption="Royalties start once it's live" />;
-  if (book.totalRoyaltyEarned > 0 && book.royaltyPending === 0) return <CardFigure value="All paid" tone="success" caption="No royalty pending" />;
-  if (book.royaltyPending === 0) return <CardFigure value={formatINR(0)} tone="muted" caption="Royalty pending" />;
-  return <CardFigure value={formatINR(book.royaltyPending)} tone="primary" caption="Royalty pending" />;
-}
-
-function BookCard({ book }: { book: BookDto }) {
-  const queryUrl = `/author/tickets/new?bookId=${encodeURIComponent(book.id)}`;
-  return (
-    <ListCard accent={book.isPublished ? undefined : "warning"}>
-      <CardHead
-        aside={
-          book.mrp !== null ? (
-            <span>
-              <span className="muted">MRP</span> <strong>{formatINR(book.mrp)}</strong>
-            </span>
-          ) : null
-        }
-      >
-        <strong className="lcard__headline">{book.title}</strong>
-        {book.genre && <span className="muted">{book.genre}</span>}
-      </CardHead>
-      <CardBody>
-        <CardTitle
-          title={<BookStatusBadge status={book.status} isPublished={book.isPublished} />}
-          sub={
-            <>
-              <span className="mono">{book.isbn ?? "ISBN pending"}</span>
-              <br />
-              {book.publicationDate ? `Published ${formatDate(book.publicationDate)}` : "Not published yet"}
-            </>
-          }
-        />
-        {book.isPublished ? <RoyaltyStats book={book} /> : <ProductionProgress status={book.status} />}
-        <PendingFigure book={book} />
-      </CardBody>
-      <CardFacts>
-        <Fact icon={<GlobeIcon />} label="Available on">
-          {book.availableOn.length ? (
-            book.availableOn.map((p) => <Chip key={p}>{p}</Chip>)
-          ) : (
-            <span className="muted">Not listed yet</span>
-          )}
-        </Fact>
-        {book.printPartner && (
-          <Fact icon={<PrinterIcon />} label="Printed by">
-            <Chip>{book.printPartner}</Chip>
-          </Fact>
-        )}
-      </CardFacts>
-      <CardFoot
-        links={
-          <Link to={queryUrl} className="link-action">
-            Ask about royalties
-          </Link>
-        }
-        action={
-          <Link className="btn btn--primary btn--sm" to={queryUrl}>
-            Ask about this book
-          </Link>
-        }
-      />
-    </ListCard>
-  );
-}
-
+/** The author's books with sales, royalties and production progress. */
 export function MyBooksPage() {
   const { data, isPending, error, refetch } = useMyBooks();
 
+  useEffect(() => {
+    const previous = document.title;
+    document.title = "My books | BookLeaf Author Support";
+    return () => {
+      document.title = previous;
+    };
+  }, []);
+
   return (
-    <div className="stack-lg">
-      <div className="page-header">
-        <h1>My Books</h1>
-        <Link className="btn btn--primary" to="/author/tickets/new">
-          New query
-        </Link>
-      </div>
+    <div className="hb-page">
+      <PageHeader
+        breadcrumbs={[{ label: "Dashboard", to: "/author/overview" }, { label: "My books" }]}
+        title="My books"
+        subtitle="Sales, royalties and production progress for every book you publish with BookLeaf."
+        actions={
+          <Link className="btn btn--primary" to="/author/tickets/new">
+            New query
+          </Link>
+        }
+      />
       {isPending ? (
-        <Spinner label="Loading your books…" />
+        <>
+          <KpiSkeletons />
+          <BookCardSkeletons />
+        </>
       ) : error ? (
-        <ErrorState error={error} onRetry={() => void refetch()} />
+        <Card as="section" aria-labelledby="hb-error-title">
+          <div className="hb-empty" role="alert">
+            <h2 id="hb-error-title" className="hb-empty__title">
+              We couldn't load your books
+            </h2>
+            <p className="hb-empty__body">
+              {error instanceof Error ? error.message : "Something went wrong."} Please try again.
+            </p>
+            <div className="hb-empty__actions">
+              <button type="button" className="btn btn--sm" onClick={() => void refetch()}>
+                Retry
+              </button>
+            </div>
+          </div>
+        </Card>
       ) : (
         <>
-          <RoyaltySummary royalty={data.royalty} />
-          <section aria-labelledby="books-heading" className="stack">
-            <h2 id="books-heading" className="section-title">
-              Your books ({data.books.length})
-            </h2>
-            {data.books.length === 0 ? (
-              <EmptyState
-                title="No books yet"
-                action={
-                  <Link className="btn" to="/author/tickets/new">
+          <RoyaltySummary royalty={data.royalty} books={data.books} />
+          {data.books.length === 0 ? (
+            <Card as="section" aria-labelledby="hb-nobooks-title">
+              <div className="hb-empty">
+                <h2 id="hb-nobooks-title" className="hb-empty__title">
+                  No books yet
+                </h2>
+                <p className="hb-empty__body">
+                  Once your book is registered with BookLeaf it will appear here with its status, sales and royalties. If you
+                  expected to see a book, let our team know.
+                </p>
+                <div className="hb-empty__actions">
+                  <Link className="btn btn--primary btn--sm" to="/author/tickets/new">
                     Contact support
                   </Link>
-                }
-              >
-                Once your book is registered with BookLeaf it will appear here with its status, sales and royalties.
-              </EmptyState>
-            ) : (
-              <div className="card-list">
-                {data.books.map((book) => (
-                  <BookCard key={book.id} book={book} />
-                ))}
+                </div>
               </div>
-            )}
-          </section>
+            </Card>
+          ) : (
+            <BookList books={data.books} />
+          )}
         </>
       )}
     </div>
