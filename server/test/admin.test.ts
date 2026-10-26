@@ -25,6 +25,7 @@ describe("admin endpoints", () => {
     const author = await loginAs(t.app, "priya.sharma@email.com");
     expect((await author.get("/api/v1/admin/team")).status).toBe(403);
     expect((await author.get("/api/v1/admin/stats")).status).toBe(403);
+    expect((await author.get("/api/v1/admin/dashboard")).status).toBe(403);
   });
 
   it("reports queue, SLA and AI stats", async () => {
@@ -104,6 +105,7 @@ describe("API docs", () => {
         "/tickets/{id}/reclassify",
         "/admin/team",
         "/admin/stats",
+        "/admin/dashboard",
         "/events",
       ].sort(),
     );

@@ -54,6 +54,8 @@ const envSchema = z
     /** Demo credentials used by the seed. Override in any shared environment. */
     SEED_AUTHOR_PASSWORD: z.string().min(8).default("Author@123"),
     SEED_ADMIN_PASSWORD: z.string().min(8).default("Admin@123"),
+    /** On a fresh database, also add ~4 weeks of resolved demo tickets so the dashboard has history. */
+    SEED_DEMO_HISTORY: bool.default(true),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === "production") {
