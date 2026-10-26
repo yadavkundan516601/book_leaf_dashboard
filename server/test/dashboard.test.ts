@@ -153,6 +153,10 @@ describe("GET /admin/dashboard without history", () => {
   });
   afterAll(() => t.close());
 
+  it("seeds only the five demo tickets when SEED_DEMO_HISTORY is off", async () => {
+    expect((await t.ctx.db.select({ id: tickets.id }).from(tickets)).length).toBe(5);
+  });
+
   it("returns zeros and nulls when there are no tickets", async () => {
     await t.ctx.db.delete(tickets);
     const admin = await loginAs(t.app, ADMIN_EMAIL);
