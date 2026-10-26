@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router";
 import { useAuth } from "../auth/AuthProvider";
+import { ThemeToggle } from "./ThemeToggle";
 import { RealtimeStatusContext, useRealtime, type RealtimeStatus } from "../realtime/useRealtime";
 
 export interface NavItem {
@@ -49,6 +50,7 @@ export function Layout({ nav, portal }: { nav: NavItem[]; portal: string }) {
           </nav>
           <div className="topbar__user">
             <LiveIndicator status={status} />
+            <ThemeToggle />
             <span className="topbar__name">{user?.name}</span>
             <button type="button" className="btn btn--ghost btn--sm" onClick={() => void logout()}>
               Sign out

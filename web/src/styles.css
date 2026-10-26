@@ -35,6 +35,34 @@
   color-scheme: light;
 }
 
+/* Dark theme: same coral brand on warm dark surfaces. Toggled via <html data-theme="dark">. */
+:root[data-theme="dark"] {
+  --bg: #1c1415;
+  --surface: #261b1d;
+  --surface-2: #2e2124;
+  --border: #46333a;
+  --text: #f6ecec;
+  --muted: #c7b3b6;
+  --primary: #f26979;
+  --primary-hover: #f78d99;
+  --primary-soft: #3b2228;
+  --info-bg: #11303f;
+  --info: #5cc0f0;
+  --success-bg: #14301f;
+  --success: #5fd38a;
+  --warning-bg: #3a2d12;
+  --warning: #f0b45a;
+  --orange-bg: #3d2514;
+  --orange: #ffa66b;
+  --danger-bg: #3d1a1c;
+  --danger: #ff8f8f;
+  --internal-bg: #2d2614;
+  --internal-border: #6b5a1c;
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 40%), 0 1px 2px -1px rgb(0 0 0 / 40%);
+  --shadow-hover: 0 10px 24px -6px rgb(0 0 0 / 55%);
+  color-scheme: dark;
+}
+
 /* ---------- Base ---------- */
 *,
 *::before,
@@ -1066,4 +1094,48 @@ legend {
   .topbar__name {
     display: none;
   }
+}
+
+/* ---------- Theme toggle ---------- */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--pill);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+.theme-toggle:hover {
+  color: var(--primary-hover);
+  background: var(--primary-soft);
+  border-color: var(--primary-light);
+}
+.login-hero {
+  position: relative;
+}
+.login-hero__toggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgb(255 255 255 / 20%);
+  border-color: rgb(255 255 255 / 45%);
+  color: #fff;
+}
+.login-hero__toggle:hover {
+  background: rgb(255 255 255 / 35%);
+  color: #fff;
+  border-color: #fff;
+}
+
+/* The logo artwork is dark-on-light, so give it a light plate on dark surfaces. */
+:root[data-theme="dark"] .brand__logo {
+  background: #fff;
+  border-radius: 0.6rem;
+  padding: 2px 8px;
 }

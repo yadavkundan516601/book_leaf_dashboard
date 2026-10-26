@@ -5,6 +5,7 @@ import { ApiError, errorMessage } from "../api/client";
 import { homeFor, useAuth } from "../auth/AuthProvider";
 import { FormField, toFieldErrors } from "../components/FormField";
 import { Spinner } from "../components/Spinner";
+import { ThemeToggle } from "../components/ThemeToggle";
 
 const DEMO_ACCOUNTS = [
   { email: "priya.sharma@email.com", password: "Author@123", label: "Priya Sharma", note: "Author · live books with royalties" },
@@ -54,6 +55,7 @@ export function LoginPage() {
   return (
     <div className="login-page">
       <header className="login-hero">
+        <ThemeToggle className="login-hero__toggle" />
         <img className="login-hero__logo" src="/logo.svg" alt="BookLeaf Publishing" />
         <h1>
           The BookLeaf <span>Author Support</span> Portal
