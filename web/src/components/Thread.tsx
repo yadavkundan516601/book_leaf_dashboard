@@ -1,5 +1,7 @@
 import type { MessageSender, TicketMessageDto } from "@bookleaf/shared";
 import { formatDateTime, formatRelative } from "../lib/format";
+import "../styles/author-tickets.css";
+import { Avatar } from "./ui";
 
 interface ThreadProps {
   messages: TicketMessageDto[];
@@ -8,21 +10,50 @@ interface ThreadProps {
   emptyText: string;
 }
 
+export const SUPPORT_NAME = "BookLeaf Support";
+
+/** Who a message is shown as. Authors see the team as "BookLeaf Support" and themselves as "You". */
+function senderLabel(m: TicketMessageDto, viewer: MessageSender): { name: string; sub?: string; avatar: string } {
+  if (viewer === "author") {
+    return m.sender === "admin"
+      ? { name: SUPPORT_NAME, sub: m.senderName, avatar: SUPPORT_NAME }
+      : { name: "You", avatar: m.senderName };
+  }
+  return m.sender === "admin"
+    ? { name: `${m.senderName} · BookLeaf`, avatar: m.senderName }
+    : { name: m.senderName, avatar: m.senderName };
+}
+
+/**
+ * Chat-style conversation. The list is a polite live region, so replies that arrive while the page is open are
+ * announced to screen readers.
+ */
 export function Thread({ messages, viewer, emptyText }: ThreadProps) {
-  if (messages.length === 0) return <p className="muted thread__empty">{emptyText}</p>;
   return (
-    <ol className="thread">
-      {messages.map((m) => (
-        <li key={m.id} className={`bubble bubble--${m.sender} ${m.sender === viewer ? "bubble--mine" : ""}`}>
-          <div className="bubble__meta">
-            <strong>{m.sender === "admin" ? `${m.senderName} · BookLeaf` : m.senderName}</strong>
-            <time dateTime={m.createdAt} title={formatDateTime(m.createdAt)}>
-              {formatRelative(m.createdAt)}
-            </time>
-          </div>
-          <div className="bubble__body">{m.body}</div>
-        </li>
-      ))}
-    </ol>
+    <div className="thread-wrap">
+      {messages.length === 0 && <p className="muted thread__empty">{emptyText}</p>}
+      <ol className="thread" aria-live="polite" aria-relevant="additions" aria-label="Messages">
+        {messages.map((m) => {
+          const who = senderLabel(m, viewer);
+          const mine = m.sender === viewer;
+          return (
+            <li key={m.id} className={`tmsg tmsg--${m.sender}${mine ? " tmsg--mine" : ""}`}>
+              <Avatar name={who.avatar} size="md" decorative />
+              <div className="tmsg__bubble">
+                <div className="tmsg__meta">
+                  <strong className="tmsg__name">{who.name}</strong>
+                  {who.sub && <span className="tmsg__sub">{who.sub}</span>}
+                  <time className="tmsg__time" dateTime={m.createdAt} title={formatDateTime(m.createdAt)}>
+                    {formatRelative(m.createdAt)}
+                    <span className="ui-sr-only">, {formatDateTime(m.createdAt)}</span>
+                  </time>
+                </div>
+                <div className="tmsg__body">{m.body}</div>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }

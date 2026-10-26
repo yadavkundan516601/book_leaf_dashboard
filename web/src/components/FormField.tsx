@@ -4,18 +4,42 @@ interface FormFieldProps {
   label: string;
   error?: string;
   hint?: ReactNode;
+  /** Character counter or similar status shown at the right of the label row (also read with the field). */
+  counter?: ReactNode;
+  /** Adds "(optional)" after the label. */
+  optional?: boolean;
+  className?: string;
   /** Receives the id and aria props to spread onto the control. */
   children: (control: { id: string; "aria-invalid": boolean; "aria-describedby"?: string }) => ReactElement;
 }
 
-export function FormField({ label, error, hint, children }: FormFieldProps) {
+export function FormField({ label, error, hint, counter, optional = false, className, children }: FormFieldProps) {
   const id = useId();
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
-  const describedBy = [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(" ") || undefined;
+  const counterId = `${id}-counter`;
+  const describedBy =
+    [error ? errorId : null, hint ? hintId : null, counter !== undefined ? counterId : null].filter(Boolean).join(" ") ||
+    undefined;
+  const cls = ["field", error && "field--error", className].filter(Boolean).join(" ");
   return (
-    <div className={error ? "field field--error" : "field"}>
-      <label htmlFor={id}>{label}</label>
+    <div className={cls}>
+      {counter !== undefined ? (
+        <div className="field__label-row">
+          <label htmlFor={id}>
+            {label}
+            {optional && <span className="field__optional"> (optional)</span>}
+          </label>
+          <span id={counterId} className="field__count">
+            {counter}
+          </span>
+        </div>
+      ) : (
+        <label htmlFor={id}>
+          {label}
+          {optional && <span className="field__optional"> (optional)</span>}
+        </label>
+      )}
       {children({ id, "aria-invalid": Boolean(error), "aria-describedby": describedBy })}
       {hint && (
         <div id={hintId} className="field__hint">

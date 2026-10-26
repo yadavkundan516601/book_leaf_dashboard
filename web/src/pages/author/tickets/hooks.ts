@@ -1,5 +1,5 @@
-import { useCallback, useContext, useEffect, useRef } from "react";
-import { UNSAFE_NavigationContext, type Navigator, type To } from "react-router";
+import { useCallback, useEffect, useRef } from "react";
+import { useBlocker, type BlockerFunction } from "react-router";
 import { useConfirm, type ConfirmOptions } from "../../../components/ui";
 
 const APP_NAME = "BookLeaf Author Support";
@@ -17,69 +17,65 @@ export function useDocumentTitle(title: string) {
 
 const LEAVE_DEFAULTS: ConfirmOptions = {
   title: "Leave without sending?",
-  message: "What you've written hasn't been sent yet. If you leave now it won't reach our team.",
+  message: "Your text will be lost.",
   confirmLabel: "Leave without sending",
-  cancelLabel: "Keep writing",
+  cancelLabel: "Stay and keep editing",
+  // "danger" puts the initial focus on the safe choice (stay).
   tone: "danger",
 };
 
-/** Target pathname of a navigation; a search-only change counts as staying on the page. */
-const pathnameOf = (to: To) =>
-  typeof to === "string" ? new URL(to, window.location.href).pathname : (to.pathname ?? window.location.pathname);
-
 /**
- * Guards unsent text: asks "Leave without sending?" before an in-app navigation to another page and sets
- * `beforeunload` for reloads/tab closes.
- *
- * The app mounts a `<BrowserRouter>`, where `useBlocker` is unavailable (it needs a data router), so in-app
- * navigations are intercepted by wrapping the router navigator's push/replace (what `<Link>`, `<NavLink>` and
- * `navigate()` call). Browser back/forward (popstate) cannot be intercepted this way.
+ * Guards unsent text. While `when` is true:
+ * - in-app navigations to another page (links, `navigate()`, and the browser back/forward buttons) are held by
+ *   react-router's `useBlocker` and only continue if the author confirms "Leave without sending?";
+ * - reloads and tab closes get the browser's own `beforeunload` prompt.
+ * A change of search/hash on the same page is not blocked.
  *
  * Returns `allowNextNavigation()`, for a navigation the page itself starts after the text was handled (e.g. after
  * a successful submit, before React has re-rendered with the cleared text).
  */
 export function useLeaveGuard(when: boolean, options: Partial<ConfirmOptions> = {}) {
-  const { navigator } = useContext(UNSAFE_NavigationContext);
   const confirm = useConfirm();
   const allowNext = useRef(false);
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
+  const shouldBlock = useCallback<BlockerFunction>(
+    ({ currentLocation, nextLocation }) => {
+      if (allowNext.current) {
+        allowNext.current = false;
+        return false;
+      }
+      return when && currentLocation.pathname !== nextLocation.pathname;
+    },
+    [when],
+  );
+  const blocker = useBlocker(shouldBlock);
+
+  useEffect(() => {
+    if (blocker.state !== "blocked") return;
+    let settled = false;
+    void confirm({ ...LEAVE_DEFAULTS, ...optionsRef.current }).then((leave) => {
+      if (settled) return;
+      settled = true;
+      if (leave) blocker.proceed();
+      else blocker.reset();
+    });
+    return () => {
+      settled = true;
+    };
+  }, [blocker, confirm]);
+
   useEffect(() => {
     if (!when) return;
-    const nav = navigator as Navigator;
-    const originalPush = nav.push;
-    const originalReplace = nav.replace;
-
-    const guard =
-      (original: Navigator["push"]): Navigator["push"] =>
-      (to, state, opts) => {
-        if (allowNext.current || pathnameOf(to) === window.location.pathname) {
-          allowNext.current = false;
-          original(to, state, opts);
-          return;
-        }
-        void confirm({ ...LEAVE_DEFAULTS, ...optionsRef.current }).then((ok) => {
-          if (ok) original(to, state, opts);
-        });
-      };
-
-    nav.push = guard(originalPush);
-    nav.replace = guard(originalReplace);
-
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       // Older browsers need returnValue set to show the prompt.
       e.returnValue = "";
     };
     window.addEventListener("beforeunload", onBeforeUnload);
-
-    return () => {
-      nav.push = originalPush;
-      nav.replace = originalReplace;
-      window.removeEventListener("beforeunload", onBeforeUnload);
-    };
-  }, [when, navigator, confirm]);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [when]);
 
   return useCallback(() => {
     allowNext.current = true;
