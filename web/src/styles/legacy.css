@@ -58,7 +58,7 @@
 }
 .skeleton-block {
   min-height: 92px;
-  border-radius: var(--radius);
+  border-radius: 0;
   background: var(--surface-2);
 }
 
@@ -78,7 +78,7 @@
   font-size: 0.68rem;
   font-weight: 700;
   padding: 0 5px;
-  border-radius: 4px;
+  border-radius: 0;
   border: 1px solid currentColor;
   letter-spacing: 0.03em;
 }
@@ -112,7 +112,7 @@
   align-items: center;
   gap: 4px;
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--surface-2);
   border: 1px solid var(--border);
   font-size: 0.82rem;
@@ -136,7 +136,7 @@
 .sla-flag {
   margin-left: 6px;
   padding: 0 5px;
-  border-radius: 4px;
+  border-radius: 0;
   font-size: 0.7rem;
   font-weight: 700;
   background: var(--danger-strong);
@@ -200,7 +200,7 @@
 .toggle,
 .tab {
   padding: 5px 12px;
-  border-radius: 999px;
+  border-radius: 0;
   border: 1px solid var(--border);
   background: var(--surface);
   cursor: pointer;
@@ -235,7 +235,7 @@
 .bubble {
   max-width: min(85%, 640px);
   padding: 10px 12px;
-  border-radius: var(--radius);
+  border-radius: 0;
   background: var(--surface-2);
   border: 1px solid var(--border);
 }
@@ -283,7 +283,7 @@
 }
 .draft-banner {
   padding: 8px 12px;
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   background: var(--info-bg);
 }
 .draft-banner__kb {
@@ -295,11 +295,11 @@
   gap: 8px;
   padding: 12px;
   border: 1px dashed var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
 }
 .skeleton-line {
   height: 12px;
-  border-radius: 4px;
+  border-radius: 0;
   background: linear-gradient(90deg, var(--surface-2), var(--border), var(--surface-2));
   background-size: 200% 100%;
   animation: shimmer 1.2s infinite linear;
@@ -314,7 +314,7 @@
 }
 .suggestion {
   padding: 8px 10px;
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   background: var(--surface-2);
 }
 .suggestion p {
@@ -350,7 +350,7 @@
 }
 .note {
   padding: 8px 10px;
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   background: var(--surface);
   border: 1px solid var(--internal-border);
 }
@@ -419,7 +419,7 @@
   align-items: flex-start;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   box-shadow: var(--shadow-lg);
   background: var(--surface);
   border-left: 4px solid var(--success);
@@ -439,7 +439,7 @@
   display: grid;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 0;
   box-shadow: var(--shadow), inset 4px 0 0 var(--edge);
   overflow: hidden;
   transition: box-shadow 0.15s, border-color 0.15s;
@@ -612,7 +612,7 @@
   align-items: center;
   padding: 2px 10px;
   border: 1px solid var(--border);
-  border-radius: var(--pill);
+  border-radius: 0;
   background: var(--surface-2);
   font-size: 0.82rem;
   font-weight: 600;
@@ -663,13 +663,13 @@
 }
 .progress__track {
   height: 8px;
-  border-radius: var(--pill);
+  border-radius: 0;
   background: var(--primary-soft);
   overflow: hidden;
 }
 .progress__bar {
   height: 100%;
-  border-radius: var(--pill);
+  border-radius: 0;
   background: linear-gradient(90deg, var(--primary), var(--primary-light));
 }
 

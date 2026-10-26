@@ -105,10 +105,10 @@ export const BellIcon = (p: IconProps) => (
 );
 export const DashboardIcon = (p: IconProps) => (
   <ShellIcon {...p}>
-    <rect x="3.5" y="3.5" width="7" height="8" rx="1.5" />
-    <rect x="13.5" y="3.5" width="7" height="5" rx="1.5" />
-    <rect x="13.5" y="11.5" width="7" height="9" rx="1.5" />
-    <rect x="3.5" y="14.5" width="7" height="6" rx="1.5" />
+    <rect x="3.5" y="3.5" width="7" height="8" />
+    <rect x="13.5" y="3.5" width="7" height="5" />
+    <rect x="13.5" y="11.5" width="7" height="9" />
+    <rect x="3.5" y="14.5" width="7" height="6" />
   </ShellIcon>
 );
 export const InboxIcon = (p: IconProps) => (

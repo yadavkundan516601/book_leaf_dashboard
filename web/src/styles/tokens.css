@@ -40,9 +40,9 @@
   --orange-text: #b54a0a;
 
   /* Shape and depth */
-  --radius: 12px;
-  --radius-control: 8px;
-  --radius-pill: 999px;
+  --radius: 0;
+  --radius-control: 0;
+  --radius-pill: 0;
   --shadow: 0 1px 2px rgb(23 43 76 / 4%), 0 4px 16px rgb(23 43 76 / 6%);
   --shadow-lg: 0 2px 6px rgb(23 43 76 / 6%), 0 16px 40px rgb(23 43 76 / 14%);
   --focus-ring: 0 0 0 3px var(--primary-ring);
@@ -74,8 +74,8 @@
   --danger-bg: var(--danger-soft);
   --internal-bg: #fffaf0;
   --internal-border: #f3d48a;
-  --radius-sm: var(--radius-control);
-  --pill: var(--radius-pill);
+  --radius-sm: 0;
+  --pill: 0;
   --shadow-hover: var(--shadow-lg);
   --font: var(--font-body);
   --font-heading: var(--font-display);

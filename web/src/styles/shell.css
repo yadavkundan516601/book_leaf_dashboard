@@ -33,7 +33,7 @@
   left: 8px;
   z-index: 100;
   padding: 8px 14px;
-  border-radius: var(--radius-control);
+  border-radius: 0;
   background: var(--primary-strong);
   color: var(--primary-contrast);
   font-weight: 700;
@@ -57,7 +57,7 @@
   height: 40px;
   padding: 0;
   border: 0;
-  border-radius: var(--radius-control);
+  border-radius: 0;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
@@ -82,7 +82,7 @@
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  border-radius: var(--radius-pill);
+  border-radius: 0;
   border: 2px solid var(--surface);
   background: var(--danger-strong);
   color: #fff;
@@ -120,13 +120,13 @@
 .shell-sidebar__brand {
   display: inline-flex;
   align-items: center;
-  border-radius: var(--radius-control);
+  border-radius: 0;
 }
 .shell-logo {
   width: auto;
   height: 40px;
   padding: 2px 6px;
-  border-radius: var(--radius-control);
+  border-radius: 0;
   background: var(--logo-plate);
 }
 .shell--rail .shell-sidebar__head {
@@ -172,7 +172,7 @@
   gap: 12px;
   min-height: 42px;
   padding: 8px 12px;
-  border-radius: var(--radius-control);
+  border-radius: 0;
   color: var(--muted);
   font-weight: 600;
   font-size: 0.92rem;
@@ -199,7 +199,7 @@
   top: 8px;
   bottom: 8px;
   width: 3px;
-  border-radius: 0 3px 3px 0;
+  border-radius: 0;
   background: var(--primary);
 }
 .shell-nav__icon {
@@ -221,7 +221,7 @@
   flex: none;
   min-width: 22px;
   padding: 1px 7px;
-  border-radius: var(--radius-pill);
+  border-radius: 0;
   background: var(--primary-soft);
   color: var(--primary-hover);
   font-size: 0.72rem;
@@ -247,7 +247,7 @@
   display: grid;
   gap: 6px;
   padding: 14px;
-  border-radius: var(--radius);
+  border-radius: 0;
   background: var(--primary-soft);
 }
 .shell-help__icon {
@@ -256,7 +256,7 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: 0;
   background: var(--surface);
   color: var(--primary-hover);
 }
@@ -334,7 +334,7 @@
   top: 50%;
   z-index: 60;
   padding: 5px 10px;
-  border-radius: 6px;
+  border-radius: 0;
   background: var(--text);
   color: var(--surface);
   font-size: 0.8rem;
@@ -413,7 +413,7 @@ input.shell-search__input:focus {
   padding: 0 6px;
   border: 1px solid var(--border-strong);
   border-bottom-width: 2px;
-  border-radius: 5px;
+  border-radius: 0;
   background: var(--surface);
   color: var(--muted);
   font-size: 0.75rem;
@@ -440,7 +440,7 @@ input.shell-search__input:focus {
 .live__dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: 0;
   background: var(--muted);
 }
 .live--live .live__dot {
@@ -465,7 +465,7 @@ input.shell-search__input:focus {
   max-width: calc(100vw - 24px);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 0;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   animation: shell-pop 0.12s ease-out;
@@ -514,7 +514,7 @@ input.shell-search__input:focus {
   align-items: flex-start;
   gap: 12px;
   padding: 10px;
-  border-radius: var(--radius-control);
+  border-radius: 0;
   color: var(--text);
   text-decoration: none;
 }
@@ -537,7 +537,7 @@ input.shell-search__input:focus {
   flex: none;
   width: 34px;
   height: 34px;
-  border-radius: 50%;
+  border-radius: 0;
 }
 .shell-notif__icon--primary {
   background: var(--primary-soft);
@@ -606,7 +606,7 @@ input.shell-search__input:focus {
   padding: 0 8px 0 4px;
   margin-left: 4px;
   border: 0;
-  border-radius: var(--radius-pill);
+  border-radius: 0;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
@@ -627,7 +627,7 @@ input.shell-search__input:focus {
   flex: none;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: 0;
   color: #fff;
   font-family: var(--font-display);
   font-weight: 700;
@@ -688,7 +688,7 @@ input.shell-search__input:focus {
   width: 100%;
   padding: 10px 12px;
   border: 0;
-  border-radius: var(--radius-control);
+  border-radius: 0;
   background: none;
   color: var(--text);
   font-weight: 600;
@@ -807,7 +807,7 @@ input.shell-search__input:focus {
 .login-brand__plate {
   justify-self: start;
   padding: 8px 14px;
-  border-radius: var(--radius);
+  border-radius: 0;
   background: #fff;
   box-shadow: 0 8px 24px rgb(120 20 40 / 18%);
 }
@@ -843,7 +843,7 @@ input.shell-search__input:focus {
   width: 24px;
   height: 24px;
   margin-top: 1px;
-  border-radius: 50%;
+  border-radius: 0;
   background: rgb(255 255 255 / 25%);
   color: #fff;
 }
@@ -893,7 +893,7 @@ input.shell-search__input:focus {
   height: 34px;
   padding: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: 0;
   background: none;
   color: var(--muted);
   cursor: pointer;
@@ -909,7 +909,7 @@ input.shell-search__input:focus {
 .login-demo {
   padding: 16px;
   border: 1px dashed var(--border-strong);
-  border-radius: var(--radius);
+  border-radius: 0;
 }
 .login-demo__title {
   font-size: 0.95rem;
@@ -928,7 +928,7 @@ input.shell-search__input:focus {
   width: 100%;
   padding: 8px 12px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-control);
+  border-radius: 0;
   background: var(--surface);
   color: var(--text);
   text-align: left;
