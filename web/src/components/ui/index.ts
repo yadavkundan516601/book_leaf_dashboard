@@ -1,0 +1,21 @@
+/** Shared UI kit (see docs/ui-brief.md). Styles live in styles/ui.css; class names are prefixed "ui-". */
+export { Accordion, type AccordionItem, type AccordionProps } from "./Accordion";
+export { Avatar, avatarColour, initialsOf, type AvatarProps, type AvatarSize } from "./Avatar";
+export { AvatarGroup, type AvatarGroupProps } from "./AvatarGroup";
+export { BarChart, type BarChartProps, type BarItem } from "./BarChart";
+export { Breadcrumbs, type BreadcrumbItem, type BreadcrumbsProps } from "./Breadcrumbs";
+export { Card, type CardProps } from "./Card";
+export { CardHeader, type CardHeaderProps } from "./CardHeader";
+export { ConfirmDialog, type ConfirmDialogProps, type ConfirmOptions } from "./ConfirmDialog";
+export { ConfirmProvider, useConfirm, type ConfirmFn } from "./ConfirmProvider";
+export { DonutChart, type DonutChartProps, type DonutSegment } from "./DonutChart";
+export { HelpTip, type HelpTipProps } from "./HelpTip";
+export { KpiCard, type KpiCardProps, type KpiDelta } from "./KpiCard";
+export { Modal, type ModalProps } from "./Modal";
+export { PageHeader, type PageHeaderProps } from "./PageHeader";
+export { Pill, type PillProps } from "./Pill";
+export { ProgressBar, type ProgressBarProps } from "./ProgressBar";
+export { Skeleton, SkeletonCard, SkeletonRows, SkeletonText, type SkeletonProps } from "./Skeleton";
+export { Sparkline, type SparklineProps } from "./Sparkline";
+export { TabPanel, Tabs, type TabItem, type TabPanelProps, type TabsProps } from "./Tabs";
+export { chartPalette, formatNumber, formatPercent, toneColor, type Tone } from "./tone";
