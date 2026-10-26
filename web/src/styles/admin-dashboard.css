@@ -32,7 +32,7 @@
   }
 }
 
-@container ad-page (min-width: 1040px) {
+@container ad-page (min-width: 900px) {
   .ad-span-3 {
     grid-column: span 3;
   }
@@ -214,7 +214,7 @@
   white-space: nowrap;
 }
 
-@container ad-tickets (min-width: 720px) {
+@container ad-tickets (min-width: 600px) {
   .ad-tickets__head,
   .ad-ticket {
     display: grid;
