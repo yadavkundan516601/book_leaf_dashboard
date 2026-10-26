@@ -47,6 +47,8 @@ export function createApp(ctx: AppContext) {
           // swagger-ui needs inline styles; scripts stay same-origin only.
           "style-src": ["'self'", "'unsafe-inline'"],
           "img-src": ["'self'", "data:"],
+          // Only meaningful behind HTTPS; breaks plain-http local runs in some browsers.
+          "upgrade-insecure-requests": ctx.env.NODE_ENV === "production" ? [] : null,
         },
       },
     }),

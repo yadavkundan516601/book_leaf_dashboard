@@ -9,3 +9,6 @@ coverage/
 .tmp/
 # Confidential assignment brief - never commit
 docs/assignment/
+
+# Local tooling
+.claude/

@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file-if-exists=.env src/db/cli.ts migrate",
+    "db:migrate:prod": "node dist/db/cli.js migrate",
     "db:seed": "tsx --env-file-if-exists=.env src/db/cli.ts seed"
   },
   "dependencies": {

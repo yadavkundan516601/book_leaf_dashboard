@@ -1,0 +1,33 @@
+# Render Blueprint: one Docker web service + managed Postgres.
+# Deploy: Render dashboard -> New -> Blueprint -> select this repo, then set
+# ANTHROPIC_API_KEY in the service's environment.
+services:
+  - type: web
+    name: bookleaf-support-portal
+    runtime: docker
+    plan: starter
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "4000"
+      - key: TRUST_PROXY
+        value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: bookleaf-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: DB_AUTO_MIGRATE
+        value: "true"
+      - key: DB_AUTO_SEED
+        value: "true"
+
+databases:
+  - name: bookleaf-db
+    plan: basic-256mb
+    databaseName: bookleaf
