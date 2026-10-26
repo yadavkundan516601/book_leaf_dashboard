@@ -687,3 +687,212 @@
     padding: 16px 12px;
   }
 }
+
+/* ---------- Ticket conversation ---------- */
+.tc-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+.tc-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-areas: "main side";
+  gap: var(--gap);
+  align-items: start;
+}
+.tc-main {
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
+}
+.tc-side {
+  grid-area: side;
+  position: sticky;
+  top: calc(var(--topbar-h) + 16px);
+  min-width: 0;
+}
+.tc-stepper {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.tc-step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  color: var(--muted);
+}
+.tc-step + .tc-step::before {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: -8px;
+  height: 16px;
+  border-left: 2px solid var(--border-strong);
+}
+.tc-step--done + .tc-step::before,
+.tc-step--current::before {
+  border-left-color: var(--success);
+}
+.tc-step__marker {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--border-strong);
+  background: var(--surface);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+.tc-step__marker svg {
+  width: 14px;
+  height: 14px;
+}
+.tc-step--done .tc-step__marker {
+  border-color: var(--success);
+  background: var(--success);
+  color: var(--primary-contrast);
+}
+.tc-step--current {
+  color: var(--text);
+  font-weight: 700;
+}
+.tc-step--current .tc-step__marker {
+  border-color: var(--primary-strong);
+  background: var(--primary-strong);
+  color: var(--primary-contrast);
+}
+.tc-step--final.tc-step--current .tc-step__marker {
+  border-color: var(--muted);
+  background: var(--muted);
+}
+.tc-next {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.tc-next__title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.tc-next__lead {
+  font-weight: 700;
+}
+.tc-next__list {
+  margin: 0;
+  padding-left: 1.2em;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+.tc-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.tc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.tc-chip__icon {
+  display: inline-flex;
+  color: var(--muted);
+}
+.tc-chip__icon svg {
+  width: 14px;
+  height: 14px;
+}
+.tc-attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 14px;
+}
+.tc-attachments__label {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.tc-reply {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.tc-reply__notice {
+  padding: 8px 12px;
+  border-left: 3px solid var(--warning);
+  background: var(--warning-soft);
+  font-size: 0.88rem;
+}
+.tc-reply__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.tc-closed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--muted);
+  background: var(--surface-2);
+}
+.tc-closed__title {
+  font-weight: 700;
+}
+.tc-skeleton-steps,
+.tc-skeleton-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+.tc-skeleton-msg {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.tc-skeleton-msg--mine {
+  flex-direction: row-reverse;
+}
+@media (max-width: 1100px) {
+  .tc-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "side" "main";
+  }
+  .tc-side {
+    position: static;
+  }
+}
