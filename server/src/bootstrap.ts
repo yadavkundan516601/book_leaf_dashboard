@@ -23,11 +23,15 @@ export async function bootstrap(opts: BootstrapOptions = {}): Promise<AppContext
   const log = opts.log ?? createLogger(env.LOG_LEVEL, env.NODE_ENV === "development");
   const dbHandle = await createDb({ databaseUrl: env.DATABASE_URL, pgliteDataDir: env.PGLITE_DATA_DIR });
 
+  const now = opts.now ?? (() => new Date());
+
   if (env.DB_AUTO_MIGRATE) await dbHandle.migrate();
   if (env.DB_AUTO_SEED) {
     await seed(dbHandle.db, {
       authorPassword: env.SEED_AUTHOR_PASSWORD,
       adminPassword: env.SEED_ADMIN_PASSWORD,
+      demoHistory: env.SEED_DEMO_HISTORY,
+      now: now(),
       log,
     });
   }
@@ -40,7 +44,7 @@ export async function bootstrap(opts: BootstrapOptions = {}): Promise<AppContext
     db: dbHandle.db,
     log,
     bus: new EventBus(),
-    now: opts.now ?? (() => new Date()),
+    now,
   };
   const ai = opts.ai ? opts.ai(base) : createAiLayer({ db: base.db, bus: base.bus, env, log, now: base.now });
   return { ...base, ai };

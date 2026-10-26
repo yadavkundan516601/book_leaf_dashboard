@@ -435,6 +435,23 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /admin/dashboard:
+    get:
+      tags: [Admin]
+      summary: Weekly trends, response times and team workload (admin)
+      description: |
+        The window is the 7 UTC calendar days ending today; `previous*` values cover the 7 days before it.
+        Daily arrays always have 7 entries, oldest first (the last one is today). Averages are in hours,
+        rounded to 1 decimal, and `null` when no ticket qualifies.
+      responses:
+        "200":
+          description: Dashboard trends.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminDashboard" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /events:
     get:
       tags: [Realtime]
@@ -903,6 +920,77 @@ components:
             categoryAgreement: { type: [number, "null"], minimum: 0, maximum: 1, description: "Share of classified tickets whose category matches the classifier's suggestion." }
             priorityAgreement: { type: [number, "null"], minimum: 0, maximum: 1 }
             draftUsageRate: { type: [number, "null"], minimum: 0, maximum: 1, description: "Share of admin replies that started from an AI draft." }
+
+    Trend:
+      type: object
+      required: [total, previousTotal, daily]
+      properties:
+        total: { type: integer, description: Sum of `daily`. }
+        previousTotal: { type: integer, description: Same count over the previous 7 days. }
+        daily: { type: array, items: { type: integer }, minItems: 7, maxItems: 7, description: "One count per UTC day, oldest first; the last entry is today." }
+
+    WindowedAverage:
+      type: object
+      required: [value, previous]
+      properties:
+        value: { type: [number, "null"], description: "Hours (1 decimal) for the current window; null when no ticket qualifies." }
+        previous: { type: [number, "null"], description: Hours for the previous 7 days. }
+
+    DashboardAgent:
+      type: object
+      required: [id, name, resolved7d, resolved30d, replies7d, replies30d, avgFirstResponseHours]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        resolved7d: { type: integer, description: Tickets assigned to this admin resolved in the dashboard window. }
+        resolved30d: { type: integer, description: Same over the 30 UTC days ending today. }
+        replies7d: { type: integer }
+        replies30d: { type: integer }
+        avgFirstResponseHours:
+          type: [number, "null"]
+          description: Over tickets assigned to this admin whose first response was in the last 30 days.
+
+    AdminDashboard:
+      type: object
+      required: [generatedAt, created, resolved, replies, avgFirstResponseHours, avgResolutionHours, unresolvedByCategory, agents, attention]
+      properties:
+        generatedAt: { type: string, format: date-time }
+        created: { $ref: "#/components/schemas/Trend" }
+        resolved:
+          $ref: "#/components/schemas/Trend"
+          description: Tickets whose resolution time falls in the window.
+        replies:
+          $ref: "#/components/schemas/Trend"
+          description: Admin replies sent.
+        avgFirstResponseHours:
+          $ref: "#/components/schemas/WindowedAverage"
+          description: Over tickets created in the window that have a first response.
+        avgResolutionHours:
+          $ref: "#/components/schemas/WindowedAverage"
+          description: Creation to resolution, over tickets resolved in the window.
+        unresolvedByCategory:
+          type: array
+          description: "Open and in-progress tickets: every category (zeros included), then `null` for tickets still being classified."
+          items:
+            type: object
+            required: [category, count]
+            properties:
+              category:
+                oneOf:
+                  - { $ref: "#/components/schemas/TicketCategory" }
+                  - { type: "null" }
+              count: { type: integer }
+        agents:
+          type: array
+          description: Every admin, sorted by resolved7d then resolved30d (descending), then name.
+          items: { $ref: "#/components/schemas/DashboardAgent" }
+        attention:
+          type: object
+          required: [slaBreached, unassignedUrgent, awaitingFirstReply]
+          properties:
+            slaBreached: { type: integer, description: Same rule as `AdminStats.slaBreached`. }
+            unassignedUrgent: { type: integer, description: Unassigned open/in-progress tickets with critical or high priority. }
+            awaitingFirstReply: { type: integer, description: Open/in-progress tickets with no admin reply yet. }
 
     RealtimeEvent:
       type: object

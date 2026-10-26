@@ -404,6 +404,69 @@ export interface AdminStatsDto {
   };
 }
 
+/** A count over the current 7-day window, the 7 days before it, and per day. */
+export interface TrendDto {
+  total: number;
+  previousTotal: number;
+  /** Exactly 7 values, one per UTC calendar day, oldest first (last = today). */
+  daily: number[];
+}
+
+/** An average (hours, 1 decimal) for the current and previous window; null when nothing qualifies. */
+export interface WindowedAverageDto {
+  value: number | null;
+  previous: number | null;
+}
+
+export interface DashboardCategoryCountDto {
+  /** null = not classified yet. */
+  category: TicketCategory | null;
+  count: number;
+}
+
+/** Per-admin workload. "7d" is the dashboard window; "30d" the 30 UTC days ending today. */
+export interface DashboardAgentDto {
+  id: string;
+  name: string;
+  resolved7d: number;
+  resolved30d: number;
+  /** Admin replies sent. */
+  replies7d: number;
+  replies30d: number;
+  /** Over tickets assigned to them whose first response was in the last 30 days. */
+  avgFirstResponseHours: number | null;
+}
+
+/**
+ * GET /admin/dashboard. The window is the 7 UTC calendar days ending today;
+ * "previous" is the 7 days before that.
+ */
+export interface AdminDashboardDto {
+  generatedAt: string;
+  /** Tickets created. */
+  created: TrendDto;
+  /** Tickets whose resolved_at falls in the window. */
+  resolved: TrendDto;
+  /** Admin replies sent. */
+  replies: TrendDto;
+  /** Over tickets created in the window that have a first response. */
+  avgFirstResponseHours: WindowedAverageDto;
+  /** resolved_at - created_at over tickets resolved in the window. */
+  avgResolutionHours: WindowedAverageDto;
+  /** Open/in-progress tickets: every category (zeros included), then the unclassified (null) bucket. */
+  unresolvedByCategory: DashboardCategoryCountDto[];
+  /** Every admin, sorted by resolved7d desc, resolved30d desc, then name. */
+  agents: DashboardAgentDto[];
+  attention: {
+    /** Same rule as AdminStatsDto.slaBreached. */
+    slaBreached: number;
+    /** Unassigned open/in-progress tickets with priority critical or high. */
+    unassignedUrgent: number;
+    /** Open/in-progress tickets with no admin reply yet. */
+    awaitingFirstReply: number;
+  };
+}
+
 /** Server-sent event payloads on GET /api/v1/events. */
 export type RealtimeEvent =
   | { type: "ticket.created"; ticketId: string }

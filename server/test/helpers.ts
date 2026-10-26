@@ -36,6 +36,7 @@ export async function createTestApp(opts: BootstrapOptions = {}): Promise<TestAp
       SERVE_WEB: "false",
       SEED_AUTHOR_PASSWORD: AUTHOR_PASSWORD,
       SEED_ADMIN_PASSWORD: ADMIN_PASSWORD,
+      SEED_DEMO_HISTORY: "false",
       ...opts.env,
     },
   });
