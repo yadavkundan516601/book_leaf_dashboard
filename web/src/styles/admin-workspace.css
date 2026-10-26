@@ -16,7 +16,7 @@
 .aw-page textarea,
 .aw-page .ui-progress__track,
 .aw-page .ui-progress__fill {
-  border-radius: 0 !important;
+  border-radius: 0;
 }
 
 /* ---------- Header ---------- */
