@@ -1,17 +1,98 @@
-import { TICKET_STATUSES, TICKET_STATUS_LABELS, type TicketStatus } from "@bookleaf/shared";
+import { TICKET_STATUSES, TICKET_STATUS_LABELS, type AuthorTicketSummaryDto, type TicketStatus } from "@bookleaf/shared";
 import { Link, useSearchParams } from "react-router";
 import { useAuthorTickets } from "../../api/hooks";
 import { StatusBadge } from "../../components/Badge";
 import { EmptyState, ErrorState } from "../../components/EmptyState";
+import { BookIcon, ClipIcon } from "../../components/icons";
+import { CardBody, CardFacts, CardFigure, CardFoot, CardHead, CardStat, CardStats, CardTitle, Chip, Fact, ListCard } from "../../components/ListCard";
 import { Pagination } from "../../components/Pagination";
 import { Spinner } from "../../components/Spinner";
-import { formatDateTime, formatRelative } from "../../lib/format";
+import { formatDate, formatDateTime, formatRelative } from "../../lib/format";
 
 const PAGE_SIZE = 20;
 const TABS: { value: TicketStatus | null; label: string }[] = [
   { value: null, label: "All" },
   ...TICKET_STATUSES.map((s) => ({ value: s, label: TICKET_STATUS_LABELS[s] })),
 ];
+
+/** The one-line answer to "what is happening with this query?". */
+function StateFigure({ ticket }: { ticket: AuthorTicketSummaryDto }) {
+  if (ticket.awaitingAuthor && (ticket.status === "open" || ticket.status === "in_progress")) {
+    return <CardFigure value="New reply" tone="primary" caption="BookLeaf has responded" />;
+  }
+  switch (ticket.status) {
+    case "open":
+      return <CardFigure value="Received" caption="We'll reply soon" />;
+    case "in_progress":
+      return <CardFigure value="With our team" caption="Being looked into" />;
+    case "resolved":
+      return <CardFigure value="Resolved" tone="success" caption="Reply to reopen" />;
+    case "closed":
+      return <CardFigure value="Closed" tone="muted" caption="No further replies" />;
+  }
+}
+
+function TicketCard({ ticket }: { ticket: AuthorTicketSummaryDto }) {
+  const href = `/author/tickets/${ticket.id}`;
+  const needsAttention = ticket.awaitingAuthor && (ticket.status === "open" || ticket.status === "in_progress");
+  return (
+    <ListCard accent={needsAttention ? "new" : undefined}>
+      <CardHead
+        aside={
+          <time className="muted" dateTime={ticket.updatedAt} title={formatDateTime(ticket.updatedAt)}>
+            Updated {formatRelative(ticket.updatedAt)}
+          </time>
+        }
+      >
+        <span className="ref">{ticket.reference}</span>
+        <StatusBadge status={ticket.status} />
+      </CardHead>
+      <CardBody>
+        <CardTitle
+          title={
+            <Link to={href} className="lcard__link">
+              {ticket.subject}
+            </Link>
+          }
+          sub={ticket.book ? undefined : "General / Account level"}
+        />
+        <CardStats>
+          <CardStat label="Opened" value={formatDate(ticket.createdAt)} />
+          <CardStat label="Messages" value={ticket.messageCount} />
+        </CardStats>
+        <StateFigure ticket={ticket} />
+      </CardBody>
+      {(ticket.book || ticket.attachments.length > 0) && (
+        <CardFacts>
+          {ticket.book && (
+            <Fact icon={<BookIcon />} label="About">
+              <Chip>{ticket.book.title}</Chip>
+            </Fact>
+          )}
+          {ticket.attachments.length > 0 && (
+            <Fact icon={<ClipIcon />} label="Attachments">
+              {ticket.attachments.map((a) => (
+                <Chip key={a.name}>{a.name}</Chip>
+              ))}
+            </Fact>
+          )}
+        </CardFacts>
+      )}
+      <CardFoot
+        links={
+          <Link to={href} className="link-action">
+            View conversation
+          </Link>
+        }
+        action={
+          <Link to={href} className={needsAttention ? "btn btn--primary btn--sm" : "btn btn--sm"}>
+            {needsAttention ? "Read reply" : "Open ticket"}
+          </Link>
+        }
+      />
+    </ListCard>
+  );
+}
 
 const isStatus = (v: string | null): v is TicketStatus => TICKET_STATUSES.some((s) => s === v);
 
@@ -82,27 +163,11 @@ export function MyTicketsPage() {
         )
       ) : (
         <>
-          <ul className="ticket-list">
+          <div className="card-list">
             {data.data.map((t) => (
-              <li key={t.id}>
-                <Link to={`/author/tickets/${t.id}`} className={`ticket-card card ${t.awaitingAuthor ? "ticket-card--new" : ""}`}>
-                  <div className="ticket-card__top">
-                    <span className="ref">{t.reference}</span>
-                    <StatusBadge status={t.status} />
-                    {t.awaitingAuthor && <span className="new-reply">New reply</span>}
-                  </div>
-                  <div className="ticket-card__subject">{t.subject}</div>
-                  <div className="small muted">
-                    {t.book ? t.book.title : "General / Account"} · {t.messageCount}{" "}
-                    {t.messageCount === 1 ? "message" : "messages"} · updated{" "}
-                    <time dateTime={t.updatedAt} title={formatDateTime(t.updatedAt)}>
-                      {formatRelative(t.updatedAt)}
-                    </time>
-                  </div>
-                </Link>
-              </li>
+              <TicketCard key={t.id} ticket={t} />
             ))}
-          </ul>
+          </div>
           <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onChange={(p) => setFilter({ page: p })} />
         </>
       )}

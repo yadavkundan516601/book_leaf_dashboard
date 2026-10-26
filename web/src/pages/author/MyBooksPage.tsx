@@ -3,10 +3,11 @@ import { Link } from "react-router";
 import { useMyBooks } from "../../api/hooks";
 import { BookStatusBadge } from "../../components/Badge";
 import { EmptyState, ErrorState } from "../../components/EmptyState";
+import { GlobeIcon, PrinterIcon } from "../../components/icons";
+import { CardBody, CardFacts, CardFigure, CardFoot, CardHead, CardStat, CardStats, CardTitle, Chip, Fact, ListCard } from "../../components/ListCard";
 import { Spinner } from "../../components/Spinner";
 import { formatCount, formatDate, formatINR } from "../../lib/format";
-
-const DASH = "—";
+import { stageProgress } from "../../lib/productionStage";
 
 function RoyaltySummary({ royalty }: { royalty: RoyaltySummaryDto }) {
   const { totalEarned, totalPaid, totalPending, payoutThreshold, meetsThreshold } = royalty;
@@ -53,71 +54,113 @@ function RoyaltySummary({ royalty }: { royalty: RoyaltySummaryDto }) {
   );
 }
 
-function PaidCell({ book }: { book: BookDto }) {
-  if (book.totalRoyaltyEarned > 0 && !book.lastRoyaltyPayoutDate) return <span className="muted">No payouts yet</span>;
+/** Published books: sales and royalty numbers. */
+function RoyaltyStats({ book }: { book: BookDto }) {
+  const neverPaid = book.totalRoyaltyEarned > 0 && !book.lastRoyaltyPayoutDate;
   return (
-    <>
-      {formatINR(book.royaltyPaid)}
-      {book.lastRoyaltyPayoutDate && (
-        <div className="small muted">Last paid {formatDate(book.lastRoyaltyPayoutDate)}</div>
-      )}
-    </>
+    <CardStats>
+      <CardStat label="Copies sold" value={formatCount(book.totalCopiesSold)} />
+      <CardStat label="Royalty earned" value={formatINR(book.totalRoyaltyEarned)} />
+      <CardStat
+        label="Paid out"
+        value={neverPaid ? "Nothing yet" : formatINR(book.royaltyPaid)}
+        tone={neverPaid ? "muted" : undefined}
+        sub={book.lastRoyaltyPayoutDate ? `Last paid ${formatDate(book.lastRoyaltyPayoutDate)}` : undefined}
+      />
+    </CardStats>
   );
 }
 
-function PendingCell({ book }: { book: BookDto }) {
-  if (book.royaltyPending === 0 && book.totalRoyaltyEarned > 0) return <span className="text-success">All paid</span>;
-  return <>{formatINR(book.royaltyPending)}</>;
+/** Books still in production: where they are in the pipeline instead of empty royalty columns. */
+function ProductionProgress({ status }: { status: string }) {
+  const progress = stageProgress(status);
+  if (!progress) return <p className="muted">Sales and royalties appear once your book is live.</p>;
+  return (
+    <div className="progress">
+      <div className="progress__label">
+        <strong>{progress.stage}</strong>
+        <span className="muted">
+          Step {progress.step} of {progress.total}
+        </span>
+      </div>
+      <div
+        className="progress__track"
+        role="progressbar"
+        aria-label="Production progress"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={progress.percent}
+      >
+        <div className="progress__bar" style={{ width: `${progress.percent}%` }} />
+      </div>
+    </div>
+  );
 }
 
-function BookRow({ book }: { book: BookDto }) {
+function PendingFigure({ book }: { book: BookDto }) {
+  if (!book.isPublished) return <CardFigure value="In production" tone="muted" caption="Royalties start once it's live" />;
+  if (book.totalRoyaltyEarned > 0 && book.royaltyPending === 0) return <CardFigure value="All paid" tone="success" caption="No royalty pending" />;
+  if (book.royaltyPending === 0) return <CardFigure value={formatINR(0)} tone="muted" caption="Royalty pending" />;
+  return <CardFigure value={formatINR(book.royaltyPending)} tone="primary" caption="Royalty pending" />;
+}
+
+function BookCard({ book }: { book: BookDto }) {
+  const queryUrl = `/author/tickets/new?bookId=${encodeURIComponent(book.id)}`;
   return (
-    <tr>
-      <td data-label="Book" className="rt-title">
-        <strong>{book.title}</strong>
-        {book.genre && <div className="small muted">{book.genre}</div>}
-      </td>
-      <td data-label="Status">
-        <BookStatusBadge status={book.status} isPublished={book.isPublished} />
-      </td>
-      <td data-label="ISBN" className="nowrap">
-        {book.isbn ?? DASH}
-      </td>
-      <td data-label="Published" className="nowrap">
-        {book.publicationDate ? formatDate(book.publicationDate) : DASH}
-      </td>
-      <td data-label="MRP" className="num">
-        {book.mrp !== null ? formatINR(book.mrp) : DASH}
-      </td>
-      {book.isPublished ? (
-        <>
-          <td data-label="Copies sold" className="num">
-            {formatCount(book.totalCopiesSold)}
-          </td>
-          <td data-label="Royalty earned" className="num">
-            {formatINR(book.totalRoyaltyEarned)}
-          </td>
-          <td data-label="Paid" className="num">
-            <PaidCell book={book} />
-          </td>
-          <td data-label="Pending" className="num">
-            <PendingCell book={book} />
-          </td>
-        </>
-      ) : (
-        <td colSpan={4} data-label="Sales & royalties" className="muted">
-          {DASH} Sales &amp; royalties appear once your book is live.
-        </td>
-      )}
-      <td data-label="Available on">
-        {book.availableOn.length ? book.availableOn.join(", ") : <span className="muted">{DASH}</span>}
-      </td>
-      <td className="rt-actions">
-        <Link className="btn btn--sm" to={`/author/tickets/new?bookId=${encodeURIComponent(book.id)}`}>
-          Ask about this book
-        </Link>
-      </td>
-    </tr>
+    <ListCard accent={book.isPublished ? undefined : "warning"}>
+      <CardHead
+        aside={
+          book.mrp !== null ? (
+            <span>
+              <span className="muted">MRP</span> <strong>{formatINR(book.mrp)}</strong>
+            </span>
+          ) : null
+        }
+      >
+        <strong className="lcard__headline">{book.title}</strong>
+        {book.genre && <span className="muted">{book.genre}</span>}
+      </CardHead>
+      <CardBody>
+        <CardTitle
+          title={<BookStatusBadge status={book.status} isPublished={book.isPublished} />}
+          sub={
+            <>
+              <span className="mono">{book.isbn ?? "ISBN pending"}</span>
+              <br />
+              {book.publicationDate ? `Published ${formatDate(book.publicationDate)}` : "Not published yet"}
+            </>
+          }
+        />
+        {book.isPublished ? <RoyaltyStats book={book} /> : <ProductionProgress status={book.status} />}
+        <PendingFigure book={book} />
+      </CardBody>
+      <CardFacts>
+        <Fact icon={<GlobeIcon />} label="Available on">
+          {book.availableOn.length ? (
+            book.availableOn.map((p) => <Chip key={p}>{p}</Chip>)
+          ) : (
+            <span className="muted">Not listed yet</span>
+          )}
+        </Fact>
+        {book.printPartner && (
+          <Fact icon={<PrinterIcon />} label="Printed by">
+            <Chip>{book.printPartner}</Chip>
+          </Fact>
+        )}
+      </CardFacts>
+      <CardFoot
+        links={
+          <Link to={queryUrl} className="link-action">
+            Ask about royalties
+          </Link>
+        }
+        action={
+          <Link className="btn btn--primary btn--sm" to={queryUrl}>
+            Ask about this book
+          </Link>
+        }
+      />
+    </ListCard>
   );
 }
 
@@ -139,8 +182,8 @@ export function MyBooksPage() {
       ) : (
         <>
           <RoyaltySummary royalty={data.royalty} />
-          <section className="card card--flush" aria-labelledby="books-heading">
-            <h2 id="books-heading" className="card__title">
+          <section aria-labelledby="books-heading" className="stack">
+            <h2 id="books-heading" className="section-title">
               Your books ({data.books.length})
             </h2>
             {data.books.length === 0 ? (
@@ -155,31 +198,10 @@ export function MyBooksPage() {
                 Once your book is registered with BookLeaf it will appear here with its status, sales and royalties.
               </EmptyState>
             ) : (
-              <div className="table-scroll">
-                <table className="table table--responsive">
-                  <thead>
-                    <tr>
-                      <th scope="col">Book</th>
-                      <th scope="col">Status</th>
-                      <th scope="col">ISBN</th>
-                      <th scope="col">Published</th>
-                      <th scope="col" className="num">MRP</th>
-                      <th scope="col" className="num">Copies sold</th>
-                      <th scope="col" className="num">Royalty earned</th>
-                      <th scope="col" className="num">Paid</th>
-                      <th scope="col" className="num">Pending</th>
-                      <th scope="col">Available on</th>
-                      <th scope="col">
-                        <span className="sr-only">Actions</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.books.map((book) => (
-                      <BookRow key={book.id} book={book} />
-                    ))}
-                  </tbody>
-                </table>
+              <div className="card-list">
+                {data.books.map((book) => (
+                  <BookCard key={book.id} book={book} />
+                ))}
               </div>
             )}
           </section>

@@ -11,14 +11,18 @@ import {
   type TicketSort,
 } from "@bookleaf/shared";
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
-import { useAdminTickets, useTeam } from "../../api/hooks";
+import { Link, useSearchParams } from "react-router";
+import { useAdminTickets, useTeam, useUpdateTicket } from "../../api/hooks";
 import { useAuth } from "../../auth/AuthProvider";
 import { CategoryChip, PriorityBadge, StatusBadge } from "../../components/Badge";
 import { EmptyState, ErrorState } from "../../components/EmptyState";
+import { BookIcon, SparkIcon, TagIcon } from "../../components/icons";
+import { CardBody, CardFacts, CardFigure, CardFoot, CardHead, CardStat, CardStats, CardTitle, Chip, Fact, ListCard } from "../../components/ListCard";
 import { Pagination } from "../../components/Pagination";
 import { Spinner } from "../../components/Spinner";
-import { formatAge, formatDateTime, formatRelative } from "../../lib/format";
+import { useToast } from "../../components/Toast";
+import { errorMessage } from "../../api/client";
+import { formatAge, formatDate, formatDateTime, formatRelative } from "../../lib/format";
 import { hasCustomFilters, readFilters, toListQuery, writeFilters, type QueueFilters } from "./queueFilters";
 import { StatsStrip } from "./StatsStrip";
 
@@ -31,72 +35,102 @@ const SORT_LABELS: Record<TicketSort, string> = {
 
 const toggle = <T,>(list: T[], value: T) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
-function AgeCell({ ticket }: { ticket: AdminTicketSummaryDto }) {
-  if (ticket.ageHours === null) return <span className="muted">—</span>;
-  const target = ticket.classification.priority ? FIRST_RESPONSE_SLA_HOURS[ticket.classification.priority] : null;
+/** How long the ticket has waited: the number an ops lead scans for. */
+function AgeFigure({ ticket }: { ticket: AdminTicketSummaryDto }) {
+  if (ticket.ageHours === null) {
+    return <CardFigure value={TICKET_STATUS_LABELS[ticket.status]} tone="muted" caption="No action needed" />;
+  }
+  const priority = ticket.classification.priority;
+  const target = priority ? FIRST_RESPONSE_SLA_HOURS[priority] : null;
+  if (ticket.slaBreached) {
+    return <CardFigure value={formatAge(ticket.ageHours)} tone="danger" caption={`SLA breached${target ? ` · target ${target}h` : ""}`} />;
+  }
+  return <CardFigure value={formatAge(ticket.ageHours)} caption={ticket.firstRespondedAt ? "Open, team replied" : "Waiting for a reply"} />;
+}
+
+function AssignToMe({ ticket }: { ticket: AdminTicketSummaryDto }) {
+  const { user } = useAuth();
+  const toast = useToast();
+  const update = useUpdateTicket(ticket.id);
+  if (!user || ticket.assignee?.id === user.id || ticket.status === "closed") return null;
   return (
-    <span
-      className={ticket.slaBreached ? "age age--breached" : "age"}
-      title={
-        ticket.slaBreached
-          ? `First-response SLA breached${target ? ` (target ${target}h)` : ""}`
-          : `Opened ${formatDateTime(ticket.createdAt)}`
+    <button
+      type="button"
+      className="link-action"
+      disabled={update.isPending}
+      onClick={() =>
+        update.mutate(
+          { assigneeId: user.id },
+          { onSuccess: () => toast.success(`${ticket.reference} assigned to you.`), onError: (e) => toast.error(errorMessage(e)) },
+        )
       }
     >
-      {formatAge(ticket.ageHours)}
-      {ticket.slaBreached && <span className="sla-flag">SLA</span>}
-    </span>
+      {update.isPending ? "Assigning…" : "Assign to me"}
+    </button>
   );
 }
 
-function TicketRow({ ticket }: { ticket: AdminTicketSummaryDto }) {
-  const navigate = useNavigate();
+function QueueCard({ ticket }: { ticket: AdminTicketSummaryDto }) {
   const href = `/admin/tickets/${ticket.id}`;
-  const priority = ticket.classification.priority;
+  const { classification } = ticket;
+  const priority = classification.priority;
+  const accent = priority === "critical" ? "critical" : priority === "high" ? "high" : undefined;
   return (
-    <tr
-      className={`clickable ${priority === "critical" ? "row--critical" : priority === "high" ? "row--high" : ""}`}
-      onClick={(e) => {
-        if (!(e.target as HTMLElement).closest("a")) void navigate(href);
-      }}
-    >
-      <td className="nowrap">
+    <ListCard accent={accent}>
+      <CardHead
+        aside={
+          <time className="muted" dateTime={ticket.updatedAt} title={formatDateTime(ticket.updatedAt)}>
+            Updated {formatRelative(ticket.updatedAt)}
+          </time>
+        }
+      >
         <Link to={href} className="ref">
           {ticket.reference}
         </Link>
-      </td>
-      <td className="cell-subject">
-        <Link to={href} className="cell-subject__title">
-          {ticket.subject}
-        </Link>
-        <div className="small muted">
-          {ticket.author.name}
-          {ticket.book && <> · {ticket.book.title}</>}
-        </div>
-      </td>
-      <td>
-        <CategoryChip classification={ticket.classification} />
-      </td>
-      <td>
-        {ticket.classification.state === "pending" && !priority ? (
-          <span className="muted small">…</span>
-        ) : (
-          <PriorityBadge priority={priority} />
-        )}
-      </td>
-      <td>
+        {classification.state === "pending" && !priority ? <span className="muted small">Prioritising…</span> : <PriorityBadge priority={priority} />}
         <StatusBadge status={ticket.status} />
-      </td>
-      <td className="nowrap">{ticket.assignee ? ticket.assignee.name : <span className="muted">Unassigned</span>}</td>
-      <td className="nowrap">
-        <AgeCell ticket={ticket} />
-      </td>
-      <td className="nowrap small muted">
-        <time dateTime={ticket.updatedAt} title={formatDateTime(ticket.updatedAt)}>
-          {formatRelative(ticket.updatedAt)}
-        </time>
-      </td>
-    </tr>
+        {ticket.slaBreached && <span className="sla-flag">SLA</span>}
+      </CardHead>
+      <CardBody>
+        <CardTitle
+          title={
+            <Link to={href} className="lcard__link">
+              {ticket.subject}
+            </Link>
+          }
+          sub={ticket.author.name}
+        />
+        <CardStats>
+          <CardStat label="Assignee" value={ticket.assignee ? ticket.assignee.name : "Unassigned"} tone={ticket.assignee ? undefined : "muted"} />
+          <CardStat label="Messages" value={ticket.messageCount} />
+          <CardStat label="Opened" value={formatDate(ticket.createdAt)} />
+        </CardStats>
+        <AgeFigure ticket={ticket} />
+      </CardBody>
+      <CardFacts>
+        <Fact icon={<TagIcon />} label="Category">
+          <CategoryChip classification={classification} />
+        </Fact>
+        {ticket.book && (
+          <Fact icon={<BookIcon />} label="Book">
+            <Chip>{ticket.book.title}</Chip>
+          </Fact>
+        )}
+        {classification.confidence !== null && classification.categorySource !== "admin" && (
+          <Fact icon={<SparkIcon />} label="Confidence">
+            <Chip>{Math.round(classification.confidence * 100)}%</Chip>
+          </Fact>
+        )}
+      </CardFacts>
+      <CardFoot
+        links={<AssignToMe ticket={ticket} />}
+        action={
+          <Link to={href} className="btn btn--primary btn--sm">
+            Open ticket
+          </Link>
+        }
+      />
+    </ListCard>
   );
 }
 
@@ -253,27 +287,11 @@ export function QueuePage() {
           {hasCustomFilters(params) ? "Try widening the status or date range." : "No open or in-progress tickets right now."}
         </EmptyState>
       ) : (
-        <section className="card card--flush">
-          <div className="table-scroll">
-            <table className="table queue-table">
-              <thead>
-                <tr>
-                  <th scope="col">Ref</th>
-                  <th scope="col">Subject</th>
-                  <th scope="col">Category</th>
-                  <th scope="col">Priority</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Assignee</th>
-                  <th scope="col">Age</th>
-                  <th scope="col">Updated</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.data.map((t) => (
-                  <TicketRow key={t.id} ticket={t} />
-                ))}
-              </tbody>
-            </table>
+        <section className="stack" aria-label="Tickets">
+          <div className="card-list">
+            {data.data.map((t) => (
+              <QueueCard key={t.id} ticket={t} />
+            ))}
           </div>
           <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onChange={(page) => update({ page })} />
         </section>

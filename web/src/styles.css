@@ -594,61 +594,6 @@ legend {
 }
 
 /* ---------- Tables ---------- */
-.table-scroll {
-  overflow-x: auto;
-}
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.table th,
-.table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-  vertical-align: top;
-}
-.table th {
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--primary-hover);
-  background: var(--surface-2);
-  white-space: nowrap;
-}
-.table th.num {
-  text-align: right;
-}
-.table tbody tr:last-child td {
-  border-bottom: 0;
-}
-.clickable {
-  cursor: pointer;
-}
-.clickable:hover {
-  background: var(--surface-2);
-}
-.row--critical td:first-child {
-  box-shadow: inset 4px 0 0 var(--danger);
-}
-.row--high td:first-child {
-  box-shadow: inset 4px 0 0 var(--orange);
-}
-.cell-subject {
-  min-width: 240px;
-}
-.cell-subject__title {
-  color: var(--text);
-  font-weight: 600;
-  text-decoration: none;
-}
-.age--breached {
-  color: var(--danger);
-  font-weight: 600;
-}
-.rt-actions {
-  white-space: nowrap;
-}
 .pagination {
   display: flex;
   flex-wrap: wrap;
@@ -662,50 +607,6 @@ legend {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-/* Book table collapses into cards on narrow screens. */
-@media (max-width: 760px) {
-  .table--responsive thead {
-    display: none;
-  }
-  .table--responsive,
-  .table--responsive tbody,
-  .table--responsive tr,
-  .table--responsive td {
-    display: block;
-    width: 100%;
-  }
-  .table--responsive tr {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-  }
-  .table--responsive td {
-    border: 0;
-    padding: 3px 0;
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    text-align: right;
-  }
-  .table--responsive td::before {
-    content: attr(data-label);
-    color: var(--muted);
-    font-size: 0.85rem;
-    text-align: left;
-  }
-  .table--responsive td.rt-title,
-  .table--responsive td.rt-actions {
-    display: block;
-    text-align: left;
-  }
-  .table--responsive td.rt-title::before,
-  .table--responsive td.rt-actions::before {
-    content: none;
-  }
-  .table--responsive td.rt-actions {
-    padding-top: 8px;
-  }
 }
 
 /* ---------- Filters ---------- */
@@ -768,35 +669,6 @@ legend {
 }
 
 /* ---------- Ticket lists & threads ---------- */
-.ticket-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 10px;
-}
-.ticket-card {
-  display: block;
-  color: inherit;
-  text-decoration: none;
-}
-.ticket-card:hover {
-  border-color: var(--primary);
-}
-.ticket-card--new {
-  border-left: 4px solid var(--primary);
-}
-.ticket-card__top {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-.ticket-card__subject {
-  font-weight: 600;
-  margin: 4px 0 2px;
-  overflow-wrap: anywhere;
-}
 .thread {
   list-style: none;
   margin: 0;
@@ -1141,4 +1013,293 @@ legend {
   background: #fff;
   border-radius: 0.6rem;
   padding: 2px 8px;
+}
+
+/* ---------- List cards (books, tickets, admin queue) ---------- */
+.section-title {
+  font-size: 1.15rem;
+}
+.card-list {
+  display: grid;
+  gap: 16px;
+}
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+}
+.lcard {
+  --edge: transparent;
+  display: grid;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow), inset 4px 0 0 var(--edge);
+  overflow: hidden;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.lcard:hover {
+  box-shadow: var(--shadow-hover), inset 4px 0 0 var(--edge);
+}
+.lcard--critical {
+  --edge: var(--danger);
+}
+.lcard--high {
+  --edge: var(--orange);
+}
+.lcard--new {
+  --edge: var(--primary);
+}
+.lcard--warning {
+  --edge: var(--accent);
+}
+.lcard--success {
+  --edge: var(--success);
+}
+
+.lcard__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.lcard__head-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-width: 0;
+}
+.lcard__head-aside {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.lcard__headline {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+}
+
+.lcard__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) 170px; /* fixed figure column keeps stats aligned across cards */
+  align-items: center;
+  gap: 20px 28px;
+  padding: 20px;
+}
+.lcard__title {
+  min-width: 0;
+}
+.lcard__name {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.lcard__link {
+  color: var(--text);
+  text-decoration: none;
+}
+.lcard__link:hover {
+  color: var(--primary-hover);
+}
+.lcard__sub {
+  margin-top: 6px;
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.lstats {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  gap: 12px 0;
+}
+.lstat {
+  flex: 1 1 110px;
+  padding: 0 18px;
+  border-left: 1px dashed var(--border);
+  min-width: 0;
+}
+.lstat:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.lstat dt {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.lstat dd {
+  margin: 4px 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.lstat__sub {
+  margin-top: 2px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.lfigure {
+  text-align: right;
+}
+.lfigure__value {
+  font-family: var(--font-heading);
+  font-size: 1.6rem;
+  font-weight: 900;
+  line-height: 1.15;
+}
+.lfigure__caption {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.tone-primary {
+  color: var(--primary-hover);
+}
+.tone-success {
+  color: var(--success);
+}
+.tone-danger {
+  color: var(--danger);
+}
+.tone-muted {
+  color: var(--muted);
+}
+
+.lcard__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  padding: 14px 20px;
+  border-top: 1px dashed var(--border);
+  font-size: 0.88rem;
+}
+.lfact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.lfact__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+.lfact__items {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.icon {
+  flex: none;
+}
+.lchip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--pill);
+  background: var(--surface-2);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.lcard__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.lcard__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  min-height: 1px;
+}
+.link-action {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--primary-hover);
+  text-decoration: none;
+  cursor: pointer;
+}
+.link-action:hover:not(:disabled) {
+  text-decoration: underline;
+}
+.link-action:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.progress__label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+.progress__track {
+  height: 8px;
+  border-radius: var(--pill);
+  background: var(--primary-soft);
+  overflow: hidden;
+}
+.progress__bar {
+  height: 100%;
+  border-radius: var(--pill);
+  background: linear-gradient(90deg, var(--primary), var(--primary-light));
+}
+
+@media (max-width: 900px) {
+  .lcard__body {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .lfigure {
+    text-align: left;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+  }
+}
+@media (max-width: 520px) {
+  .lcard__head,
+  .lcard__body,
+  .lcard__facts,
+  .lcard__foot {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .lstat {
+    flex-basis: 45%;
+    padding: 0 12px;
+  }
+  .lstat:nth-child(odd) {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .lcard__foot .btn {
+    width: 100%;
+  }
+  .lcard__action {
+    width: 100%;
+  }
 }
