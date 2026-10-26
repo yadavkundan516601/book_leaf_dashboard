@@ -1043,6 +1043,9 @@ legend {
   gap: 20px;
   padding: 0 16px 48px;
   margin-top: -52px;
+  /* Sit above the (positioned) hero so the cards overlap its lower edge. */
+  position: relative;
+  z-index: 1;
 }
 .login__card {
   width: 100%;
