@@ -15,7 +15,10 @@ import type { RealtimeEvent } from "@bookleaf/shared";
 
 export interface RoutedEvent {
   event: RealtimeEvent;
+  /** Owner of the ticket the event is about. */
   authorId: string;
+  /** Internal-only changes (notes, AI classification, assignment) are not sent to the author. */
+  adminOnly: boolean;
 }
 
 export class EventBus {
@@ -25,8 +28,8 @@ export class EventBus {
     this.emitter.setMaxListeners(0);
   }
 
-  publish(event: RealtimeEvent, authorId: string): void {
-    this.emitter.emit("event", { event, authorId } satisfies RoutedEvent);
+  publish(event: RealtimeEvent, authorId: string, opts: { adminOnly?: boolean } = {}): void {
+    this.emitter.emit("event", { event, authorId, adminOnly: opts.adminOnly ?? false } satisfies RoutedEvent);
   }
 
   subscribe(listener: (e: RoutedEvent) => void): () => void {
