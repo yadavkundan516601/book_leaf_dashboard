@@ -106,6 +106,7 @@ export function useRealtime(): { status: RealtimeStatus; feed: RealtimeFeed } {
     const invalidateAll = () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.tickets });
       void queryClient.invalidateQueries({ queryKey: queryKeys.stats });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
     };
 
     const onTicketEvent = (e: MessageEvent<string>) => {
@@ -118,6 +119,7 @@ export function useRealtime(): { status: RealtimeStatus; feed: RealtimeFeed } {
       const ticketId = event.ticketId;
       void queryClient.invalidateQueries({ queryKey: queryKeys.ticketLists });
       void queryClient.invalidateQueries({ queryKey: queryKeys.stats });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
       if (ticketId) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.ticket(ticketId) });
         const type = event.type ?? (e.type as RealtimeEventType);

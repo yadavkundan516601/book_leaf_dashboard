@@ -6,6 +6,7 @@ import { ApiError } from "./api/client";
 import { App } from "./App";
 import { AuthProvider } from "./auth/AuthProvider";
 import { ToastProvider } from "./components/Toast";
+import { ConfirmProvider } from "./components/ui";
 import "@fontsource/lato/700.css";
 import "@fontsource/lato/900.css";
 import "@fontsource/mulish/400.css";
@@ -31,9 +32,11 @@ createRoot(root).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ToastProvider>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
+          <ConfirmProvider>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </ConfirmProvider>
         </ToastProvider>
       </BrowserRouter>
     </QueryClientProvider>

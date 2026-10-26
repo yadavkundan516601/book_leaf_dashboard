@@ -1,5 +1,6 @@
 import type {
   AdminRefDto,
+  AdminDashboardDto,
   AdminStatsDto,
   AdminTicketDto,
   AdminTicketSummaryDto,
@@ -76,6 +77,7 @@ export function useSendMessage(ticketId: string) {
       void queryClient.invalidateQueries({ queryKey: queryKeys.ticket(ticketId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.ticketLists });
       void queryClient.invalidateQueries({ queryKey: queryKeys.stats });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
     },
   });
 }
@@ -112,6 +114,15 @@ export function useAdminStats() {
   });
 }
 
+export function useAdminDashboard() {
+  const refetchInterval = usePollInterval();
+  return useQuery({
+    queryKey: queryKeys.dashboard,
+    queryFn: () => api<AdminDashboardDto>("/admin/dashboard"),
+    refetchInterval,
+  });
+}
+
 export function useTeam() {
   return useQuery({
     queryKey: queryKeys.team,
@@ -129,6 +140,7 @@ function useAdminTicketWrite<TInput>(ticketId: string, request: (input: TInput) 
       queryClient.setQueryData(queryKeys.ticket(ticketId), ticket);
       void queryClient.invalidateQueries({ queryKey: queryKeys.ticketLists });
       void queryClient.invalidateQueries({ queryKey: queryKeys.stats });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
     },
   });
 }

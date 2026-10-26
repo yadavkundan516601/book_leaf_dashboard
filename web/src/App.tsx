@@ -17,14 +17,16 @@ import {
   UserQuestionIcon,
 } from "./components/icons";
 import { Layout, type NavGroup } from "./components/Layout";
-import { ComingSoon } from "./components/shell/ComingSoon";
 import { Spinner } from "./components/Spinner";
 import { AdminTicketPage } from "./pages/admin/AdminTicketPage";
+import { DashboardPage } from "./pages/admin/DashboardPage";
 import { QueuePage } from "./pages/admin/QueuePage";
 import { AuthorTicketPage } from "./pages/author/AuthorTicketPage";
+import { HelpPage } from "./pages/author/HelpPage";
 import { MyBooksPage } from "./pages/author/MyBooksPage";
 import { MyTicketsPage } from "./pages/author/MyTicketsPage";
 import { NewTicketPage } from "./pages/author/NewTicketPage";
+import { OverviewPage } from "./pages/author/OverviewPage";
 import { LoginPage } from "./pages/LoginPage";
 import { UiKitPage } from "./pages/UiKitPage";
 
@@ -130,19 +132,13 @@ export function App() {
           </RequireRole>
         }
       >
-        <Route index element={<Navigate to="books" replace />} />
-        <Route
-          path="overview"
-          element={<ComingSoon title="Dashboard" backTo="/author/books" backLabel="Go to My Books" />}
-        />
+        <Route index element={<Navigate to="overview" replace />} />
+        <Route path="overview" element={<OverviewPage />} />
         <Route path="books" element={<MyBooksPage />} />
         <Route path="tickets" element={<MyTicketsPage />} />
         <Route path="tickets/new" element={<NewTicketPage />} />
         <Route path="tickets/:id" element={<AuthorTicketPage />} />
-        <Route
-          path="help"
-          element={<ComingSoon title="Help & FAQ" backTo="/author/tickets/new" backLabel="Ask our team a question" />}
-        />
+        <Route path="help" element={<HelpPage />} />
       </Route>
       <Route
         path="/admin"
@@ -152,11 +148,8 @@ export function App() {
           </RequireRole>
         }
       >
-        <Route index element={<Navigate to="tickets" replace />} />
-        <Route
-          path="dashboard"
-          element={<ComingSoon title="Dashboard" backTo="/admin/tickets" backLabel="Open the ticket queue" />}
-        />
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<DashboardPage />} />
         <Route path="tickets" element={<QueuePage />} />
         <Route path="tickets/:id" element={<AdminTicketPage />} />
       </Route>

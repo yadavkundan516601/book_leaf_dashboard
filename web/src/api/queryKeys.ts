@@ -6,5 +6,6 @@ export const queryKeys = {
   ticketList: (scope: "author" | "admin", params: object) => ["tickets", "list", scope, params] as const,
   ticket: (id: string) => ["tickets", "detail", id] as const,
   stats: ["admin", "stats"] as const,
+  dashboard: ["admin", "dashboard"] as const,
   team: ["admin", "team"] as const,
 };

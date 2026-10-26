@@ -13,7 +13,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export const homeFor = (role: Role) => (role === "admin" ? "/admin/tickets" : "/author/books");
+export const homeFor = (role: Role) => (role === "admin" ? "/admin/dashboard" : "/author/overview");
 
 async function fetchMe(): Promise<UserDto | null> {
   try {
