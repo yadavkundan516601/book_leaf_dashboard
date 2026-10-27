@@ -896,3 +896,76 @@
     position: static;
   }
 }
+
+/* ---------- Instant answer (New query) ---------- */
+.ui-card.nq-answer {
+  border-left: 4px solid var(--primary);
+  background: var(--surface-2);
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.nq-answer .ui-card-header {
+  margin-bottom: 0;
+}
+.nq-answer__ask {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.nq-answer__loading {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.nq-answer__result {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.nq-answer__meta,
+.nq-answer__confidence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+.nq-answer__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+.nq-answer__notice,
+.nq-answer__stale {
+  padding: 8px 12px;
+  border-left: 3px solid var(--warning);
+  background: var(--surface);
+  font-size: 0.88rem;
+}
+.nq-answer__error {
+  color: var(--danger-text);
+  font-weight: 600;
+}
+.nq-answer__sources {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.nq-answer__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.nq-answer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}

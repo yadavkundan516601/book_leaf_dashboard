@@ -6,12 +6,14 @@ import { useCreateTicket, useMyBooks } from "../../api/hooks";
 import { AttachmentPicker } from "../../components/Attachments";
 import { FormField, toFieldErrors } from "../../components/FormField";
 import { CheckIcon } from "../../components/icons";
+import { useToast } from "../../components/Toast";
 import { Card, PageHeader } from "../../components/ui";
 import { useAuth } from "../../auth/AuthProvider";
 import { formatRelative } from "../../lib/format";
 import { stageProgress } from "../../lib/productionStage";
 import "../../styles/author-tickets.css";
 import { safeStorage, useDocumentTitle, useLeaveGuard } from "./tickets/hooks";
+import { InstantAnswer } from "./tickets/InstantAnswer";
 import { ProgressHelp, RoyaltyHelp } from "./tickets/SmartHelp";
 import { isTopicId, topicById, type TopicId } from "./tickets/topics";
 import { TopicPicker } from "./tickets/TopicPicker";
@@ -86,6 +88,7 @@ export function NewTicketPage() {
   const { user } = useAuth();
   const books = useMyBooks();
   const create = useCreateTicket();
+  const toast = useToast();
   const draftKey = `bookleaf:new-query-draft:${user?.id ?? "anonymous"}`;
 
   const [topic, setTopic] = useState<TopicId | null>(null);
@@ -111,6 +114,7 @@ export function NewTicketPage() {
   const subjectRef = useRef<HTMLInputElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const attachmentsRef = useRef<HTMLDivElement>(null);
+  const submitRef = useRef<HTMLButtonElement>(null);
   const fieldRefs: Record<Field, { current: HTMLElement | null }> = {
     bookId: bookRef,
     subject: subjectRef,
@@ -184,6 +188,19 @@ export function NewTicketPage() {
       setFocusSubjectSoon(false);
     }
   }, [focusSubjectSoon, showHelp]);
+
+  // ----- Instant answer: "That solved it" drops the draft and leaves; "Send anyway" goes to the submit button.
+  function answerSolved() {
+    safeStorage.remove(draftKey);
+    allowNavigation();
+    toast.success("Glad that helped");
+    void navigate("/author/overview");
+  }
+  function sendAnyway() {
+    const btn = submitRef.current;
+    btn?.scrollIntoView?.({ block: "center", behavior: "smooth" });
+    btn?.focus({ preventScroll: true });
+  }
 
   function focusField(f: Field) {
     const el = fieldRefs[f].current;
@@ -408,6 +425,14 @@ export function NewTicketPage() {
                     )}
                   </FormField>
 
+                  <InstantAnswer
+                    question={values.description}
+                    subject={values.subject}
+                    bookId={effective.bookId || null}
+                    onSolved={answerSolved}
+                    onSendAnyway={sendAnyway}
+                  />
+
                   <AttachmentPicker
                     ref={attachmentsRef}
                     value={values.attachments}
@@ -418,6 +443,7 @@ export function NewTicketPage() {
                   <div className="nq-submit">
                     <div className="nq-submit__buttons">
                       <button
+                        ref={submitRef}
                         type="submit"
                         className="btn btn--primary"
                         disabled={sending}
