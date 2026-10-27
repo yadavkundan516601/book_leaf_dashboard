@@ -32,6 +32,8 @@ cp server/.env.example server/.env
 
 Get a free key at [Google AI Studio](https://aistudio.google.com/apikey), open `server/.env`, replace the placeholder in `GEMINI_API_KEY="<YOUR_GEMINI_API_KEY>"` with your key, then run `npm run ai:doctor -w server` to confirm it works, and restart the server. The "AI Assistant" tile on the admin queue changes from *Degraded* to *Available*.
 
+**"AI drafting is not configured"?** The server only reads `server/.env` when it starts, so restart it after adding the key (stop it with Ctrl+C, then run it again). Check with `curl localhost:4000/api/v1/health`: `"ai":"available"` means the key is loaded, `"degraded"` means it isn't. `npm run ai:doctor -w server` tells you whether the key itself works. If you run the built version, rebuild first: `npm run build && npm start`.
+
 **Handy commands**
 
 | Command | What it does |
