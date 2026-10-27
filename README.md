@@ -30,7 +30,7 @@ The first start creates an embedded database, loads the sample data (10 authors,
 cp server/.env.example server/.env
 ```
 
-Get a free key at [Google AI Studio](https://aistudio.google.com/apikey), open `server/.env`, uncomment `GEMINI_API_KEY=`, paste your key, and restart. The "AI Assistant" tile on the admin queue changes from *Degraded* to *Available*.
+Get a free key at [Google AI Studio](https://aistudio.google.com/apikey), open `server/.env`, uncomment `GEMINI_API_KEY=`, paste your key, then run `npm run ai:doctor -w server` to confirm it works, and restart the server. The "AI Assistant" tile on the admin queue changes from *Degraded* to *Available*.
 
 **Handy commands**
 
@@ -39,6 +39,7 @@ Get a free key at [Google AI Studio](https://aistudio.google.com/apikey), open `
 | `npm test` | Runs the server tests (they never call the real AI) |
 | `npm run typecheck` | Type-checks everything |
 | `npm run dev -w web` | Frontend with hot reload at http://localhost:5173 |
+| `npm run ai:doctor -w server` | Checks that your Gemini key works (two tiny real calls) and tells you what to fix if not |
 | `npm run eval:classifier -w server` | Checks classification accuracy (uses Gemini if a key is set) |
 | `rm -rf server/.data` | Resets the local data (stop the server first) |
 
