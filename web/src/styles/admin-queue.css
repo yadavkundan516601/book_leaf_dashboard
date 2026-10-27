@@ -497,3 +497,15 @@
     flex-wrap: wrap;
   }
 }
+
+/* ---------- Triage flags (escalate, author tone) ---------- */
+.aq-row__flag {
+  padding: 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.aq-row__dot {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+}

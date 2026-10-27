@@ -1,5 +1,23 @@
-import { TICKET_STATUS_LABELS, type ClassificationSource, type TicketEventDto, type TicketStatus } from "@bookleaf/shared";
+import {
+  TICKET_STATUS_LABELS,
+  type ClassificationSource,
+  type TicketEventDto,
+  type TicketStatus,
+  type TriageSentiment,
+} from "@bookleaf/shared";
+import type { Tone } from "../../../components/ui";
 import { labelForValue } from "../../../lib/format";
+
+/** Sentiment pill tones: the angrier the author, the louder the colour. */
+export const SENTIMENT_TONE: Record<TriageSentiment, Tone> = {
+  calm: "neutral",
+  concerned: "info",
+  frustrated: "warning",
+  angry: "danger",
+};
+
+export const SENTIMENT_HELP =
+  "The author's tone as read by the classifier (AI, or keyword rules when the AI is unavailable): calm, concerned, frustrated or angry. It helps you pick your wording; it does not change the SLA.";
 
 export const SOURCE_LABELS: Record<ClassificationSource, string> = { ai: "AI", rules: "Rules", admin: "Admin" };
 
@@ -9,10 +27,13 @@ export const SOURCE_HELP =
 
 /**
  * Readable label for an activity value, including the classifier's composite form:
- * "royalty_payments/high via ai" -> "Royalty & Payments · High (AI)".
+ * "royalty_payments/high via ai" -> "Royalty & Payments · High (AI)", and a trailing
+ * ", escalate" flag -> "... (AI) · Escalate".
  */
 export function describeEventValue(value: string): string {
-  const [main = value, source] = value.split(" via ");
+  const [main = value, via] = value.split(" via ");
+  const [source, ...flags] = via ? via.split(", ") : [];
+  const flagText = flags.includes("escalate") ? " · Escalate" : "";
   const label =
     main
       .split("/")
@@ -20,7 +41,7 @@ export function describeEventValue(value: string): string {
       .map((p) => labelForValue(p))
       .join(" · ") || "Not set";
   if (!source) return label;
-  return `${label} (${SOURCE_LABELS[source as ClassificationSource] ?? source})`;
+  return `${label} (${SOURCE_LABELS[source as ClassificationSource] ?? source})${flagText}`;
 }
 
 const EVENT_LABELS: Record<string, string> = {

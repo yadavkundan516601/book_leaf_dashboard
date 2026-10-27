@@ -1,10 +1,16 @@
-import { FIRST_RESPONSE_SLA_HOURS, TICKET_STATUS_LABELS, type AdminTicketSummaryDto } from "@bookleaf/shared";
+import {
+  FIRST_RESPONSE_SLA_HOURS,
+  TICKET_STATUS_LABELS,
+  TRIAGE_SENTIMENT_LABELS,
+  type AdminTicketSummaryDto,
+} from "@bookleaf/shared";
 import { Link } from "react-router";
 import { useAuth } from "../../../auth/AuthProvider";
 import { CategoryChip, PriorityBadge, StatusBadge } from "../../../components/Badge";
-import { Avatar, HelpTip } from "../../../components/ui";
+import { Avatar, HelpTip, Pill } from "../../../components/ui";
 import { formatAge, formatDateTime, formatRelative } from "../../../lib/format";
 import { useUndoableTicketUpdate } from "../hooks";
+import { SENTIMENT_TONE } from "../ticket/format";
 
 export const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name;
 
@@ -90,6 +96,18 @@ export function QueueRow({ ticket }: { ticket: AdminTicketSummaryDto }) {
           <PriorityBadge priority={priority} />
         )}
         <StatusBadge status={ticket.status} />
+        {classification.escalate && (
+          <Pill tone="danger" className="aq-row__flag" title={classification.escalateReason ?? "Flagged for escalation"}>
+            Escalate
+          </Pill>
+        )}
+        {(classification.sentiment === "frustrated" || classification.sentiment === "angry") && (
+          <Pill tone={SENTIMENT_TONE[classification.sentiment]} className="aq-row__flag">
+            <span className="aq-row__dot" aria-hidden="true" />
+            <span className="ui-sr-only">Author tone: </span>
+            {TRIAGE_SENTIMENT_LABELS[classification.sentiment]}
+          </Pill>
+        )}
       </div>
       <div className="aq-row__assignee">
         {ticket.assignee ? (
