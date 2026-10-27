@@ -27,6 +27,8 @@ COPY --from=build /app/server/dist server/dist
 COPY --from=build /app/server/drizzle server/drizzle
 COPY --from=build /app/server/openapi.yaml server/openapi.yaml
 COPY --from=build /app/web/dist web/dist
+# Database CA certificate(s) at the repo root, if present (the glob keeps the build working without one).
+COPY aiven-ca.pem* ./
 USER node
 EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=5s CMD wget -qO- http://127.0.0.1:4000/api/v1/health || exit 1

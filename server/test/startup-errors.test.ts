@@ -27,6 +27,12 @@ describe("startup error explanations", () => {
     expect(text).toContain("uselibpqcompat=true&sslmode=require");
   });
 
+  it("explains a missing CA certificate file", () => {
+    const text = explainStartupError(new Error('DATABASE_SSL_CA_FILE="certs/aiven-ca.pem" was not found. Looked in: /app/certs/aiven-ca.pem.'))!;
+    expect(text).toContain("aiven-ca.pem");
+    expect(text).toMatch(/repository root/);
+  });
+
   it("returns null for anything else so the full stack trace is kept", () => {
     expect(explainStartupError(new Error("something unexpected"))).toBeNull();
   });

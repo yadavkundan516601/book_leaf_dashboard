@@ -12,6 +12,3 @@ docs/assignment/
 
 # Local tooling
 .claude/
-
-# Database CA certificates (deployment specific)
-server/certs/

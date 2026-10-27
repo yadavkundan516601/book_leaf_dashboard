@@ -38,6 +38,13 @@ export function explainStartupError(err: unknown, databaseUrl?: string): string 
   const target = describeDatabaseTarget(databaseUrl);
   const where = target ? ` (${target})` : "";
 
+  if (/DATABASE_SSL_CA_FILE/.test(text) && /was not found/.test(text)) {
+    return [
+      "The database CA certificate file named in DATABASE_SSL_CA_FILE was not found.",
+      "Fix: keep the certificate in the repository root (aiven-ca.pem, committed so it is deployed) and set DATABASE_SSL_CA_FILE=\"aiven-ca.pem\", or put the certificate text in DATABASE_SSL_CA.",
+    ].join("\n");
+  }
+
   switch (cause.code) {
     case "ENOTFOUND":
       return [

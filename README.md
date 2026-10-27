@@ -45,7 +45,7 @@ Get a free key at [Google AI Studio](https://aistudio.google.com/apikey), open `
 Keep your day-to-day settings in `server/.env.development` and the production values in `server/.env`. Both files are git-ignored. Dev mode always uses the embedded database, even if `server/.env` holds a real production `DATABASE_URL`, so it can't touch production data. To try the built bundle without Postgres, run `NODE_ENV=development npm start` (shell variables win over the file).
 
 **Managed Postgres (Aiven, RDS, Neon ...)** need an encrypted connection. Two ways, in order of preference:
-1. *Verified (recommended):* download your provider's CA certificate, save it as `server/certs/aiven-ca.pem` (that folder is git-ignored), and set `DATABASE_SSL_CA_FILE="certs/aiven-ca.pem"`. On hosts without files, put the PEM text in `DATABASE_SSL_CA` with `\n` for newlines.
+1. *Verified (recommended):* download your provider's CA certificate, save it as `aiven-ca.pem` in the repository root and **commit it** (a CA certificate is public, not a secret), then set `DATABASE_SSL_CA_FILE="aiven-ca.pem"` locally and in Render. The path is looked up from the repository root, so it works the same locally and in the Docker image. On hosts without files, put the PEM text in `DATABASE_SSL_CA` with `\n` for newlines.
 2. *Encrypted, issuer not verified:* end the URL with `?sslmode=require&uselibpqcompat=true`.
 
 When a CA is set the `sslmode` part of the URL is ignored and the certificate is always verified. If the database cannot be reached, the server prints what to check instead of a stack trace.

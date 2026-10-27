@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -28,6 +28,36 @@ describe("database TLS", () => {
     writeFileSync(path.join(dir, "ca.pem"), `${PEM}\n`);
     expect(resolveDatabaseCa({ DATABASE_SSL_CA_FILE: "ca.pem" }, dir)).toBe(PEM);
     expect(resolveDatabaseCa({})).toBeUndefined();
-    expect(() => resolveDatabaseCa({ DATABASE_SSL_CA_FILE: "nope.pem" }, dir)).toThrow(/does not exist/);
+    expect(() => resolveDatabaseCa({ DATABASE_SSL_CA_FILE: "nope.pem" }, dir)).toThrow(/was not found/);
+  });
+});
+
+describe("CA file lookup from the repository root", () => {
+  /** A fake monorepo: <root>/package.json (workspaces), <root>/aiven-ca.pem, <root>/server/. */
+  function fakeRepo() {
+    const root = mkdtempSync(path.join(tmpdir(), "repo-"));
+    writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "r", workspaces: ["server"] }));
+    mkdirSync(path.join(root, "server"));
+    writeFileSync(path.join(root, "server", "package.json"), JSON.stringify({ name: "s" }));
+    writeFileSync(path.join(root, "aiven-ca.pem"), `${PEM}\n`);
+    return root;
+  }
+
+  it("finds a root-level file when the server runs from server/ (local) or from the root (Docker)", () => {
+    const root = fakeRepo();
+    expect(resolveDatabaseCa({ DATABASE_SSL_CA_FILE: "aiven-ca.pem" }, path.join(root, "server"))).toBe(PEM);
+    expect(resolveDatabaseCa({ DATABASE_SSL_CA_FILE: "aiven-ca.pem" }, root)).toBe(PEM);
+  });
+
+  it("an absolute path is used as given", () => {
+    const root = fakeRepo();
+    expect(resolveDatabaseCa({ DATABASE_SSL_CA_FILE: path.join(root, "aiven-ca.pem") }, "/")).toBe(PEM);
+  });
+
+  it("explains where it looked and what to do when the file is missing", () => {
+    const root = fakeRepo();
+    const run = () => resolveDatabaseCa({ DATABASE_SSL_CA_FILE: "certs/aiven-ca.pem" }, path.join(root, "server"));
+    expect(run).toThrow(/was not found/);
+    expect(run).toThrow(/Commit the certificate at the repository root/);
   });
 });
