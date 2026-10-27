@@ -31,6 +31,8 @@ tags:
   - name: Catalog
     description: Books, royalties and the author directory.
   - name: Tickets
+  - name: Assistant
+    description: AI help for authors before they raise a ticket.
   - name: Admin
   - name: Realtime
 
@@ -401,6 +403,32 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /ai/answer:
+    post:
+      tags: [Assistant]
+      summary: Get an instant answer before raising a ticket (author)
+      description: |
+        A short answer grounded on the knowledge base and the caller's own books and royalty position.
+        Amounts and dates in the AI answer are checked against those facts. When the AI is unavailable
+        (or its answer cannot be verified) a policy-based template is returned with `source: template`
+        and a `notice`, never an error. Repeated questions are served from a cache. Rate limited per
+        user (8 per 10 minutes). A `bookId` that is not one of the author's books is a validation error.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AnswerRequest" }
+      responses:
+        "200":
+          description: The answer.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Answer" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
 
   /admin/team:
     get:
@@ -908,6 +936,43 @@ components:
         kbSections: { type: array, items: { type: string }, description: "Knowledge-base sections the draft is grounded on." }
         createdAt: { type: string, format: date-time }
         cached: { type: boolean }
+
+    AnswerRequest:
+      type: object
+      required: [question]
+      properties:
+        question: { type: string, minLength: 10, maxLength: 1000, description: "Trimmed before validation." }
+        subject: { type: string, maxLength: 150 }
+        bookId:
+          type: [string, "null"]
+          maxLength: 32
+          description: One of the author's own books; null or omitted for an account-level question.
+
+    Answer:
+      type: object
+      required: [answer, confidence, sources, source, notice, canSubmitAnyway, suggestedCategory]
+      properties:
+        answer: { type: string, description: "Plain text written to the author." }
+        confidence:
+          type: string
+          enum: [high, medium, low]
+          description: "`low` means a person should look at the question."
+        sources:
+          type: array
+          description: Knowledge-base sections the answer is based on.
+          items:
+            type: object
+            required: [id, title]
+            properties:
+              id: { type: string, examples: [royalty] }
+              title: { type: string, examples: [Royalty Policy] }
+        source:
+          type: string
+          enum: [ai, template]
+          description: "`template` = policy summary used when the assistant is unavailable or its answer could not be verified."
+        notice: { type: [string, "null"], description: "Shown with template answers." }
+        canSubmitAnyway: { type: boolean, const: true }
+        suggestedCategory: { $ref: "#/components/schemas/TicketCategory" }
 
     AdminStats:
       type: object

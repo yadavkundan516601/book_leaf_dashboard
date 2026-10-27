@@ -1,6 +1,16 @@
+import type { AnswerDto, AnswerRequestInput } from "@bookleaf/shared";
+import { useMutation } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef } from "react";
 import { useBlocker, type BlockerFunction } from "react-router";
+import { api } from "../../../api/client";
 import { useConfirm, type ConfirmOptions } from "../../../components/ui";
+
+/** Instant answer before raising a ticket. A mutation, not a query: it only runs when the author asks. */
+export function useInstantAnswer() {
+  return useMutation({
+    mutationFn: (input: AnswerRequestInput) => api<AnswerDto>("/ai/answer", { method: "POST", body: input }),
+  });
+}
 
 const APP_NAME = "BookLeaf Author Support";
 

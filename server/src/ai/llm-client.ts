@@ -18,7 +18,7 @@ import {
 } from "./provider.js";
 import type { RateLimiter } from "./rate-limiter.js";
 
-export type CallPurpose = "classify" | "draft";
+export type CallPurpose = "classify" | "draft" | "answer";
 
 export interface AiCallRecord {
   ticketId: string | null;

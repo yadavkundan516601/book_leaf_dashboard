@@ -15,6 +15,7 @@ import { createDraftService } from "./draft-service.js";
 import type { AiLayer } from "./index.js";
 import { createGuardedLlm } from "./llm-client.js";
 import type { LlmProvider } from "./provider.js";
+import { createAnswerService } from "./answer-service.js";
 import { createProviderFromEnv } from "./provider-factory.js";
 import { createRateLimiter, type LimiterClock } from "./rate-limiter.js";
 
@@ -98,5 +99,6 @@ export function createAiLayer(deps: AiLayerDeps): AiLayer {
       models: () => ({ classify: env.AI_CLASSIFY_MODEL, draft: env.AI_DRAFT_MODEL }),
       provider: () => (provider ? providerName : null),
     },
+    answers: createAnswerService({ db, log, llm, model: env.AI_DRAFT_MODEL, now }),
   };
 }
