@@ -83,6 +83,8 @@ Along the way you can change the category or priority (your change is marked *Ad
 
 **Tested live:** with a real key, triage took 2–5 s and drafts 3–8 s, the refine buttons and instant answer worked, and every figure in the replies matched the author's data. `gemini-3.8-flash` was listed in Google's docs but timed out in testing, so it is not used by default; models also warm up at startup because the first request after idle can be slow.
 
+**Free-tier quotas.** Google gives each model its own small daily allowance on the free tier. When a model's allowance is used up, the app switches to the next model automatically (the fast `gemini-3.5-flash-lite` is next in line) and tries the first one again once it resets. Only if every model is used up do drafts fall back to templates, with a notice saying when the limit resets. To stretch the free tier, set `AI_DRAFT_MODEL="gemini-3.5-flash-lite"`; for heavy use, enable billing on your Google AI project.
+
 **Set it up:** create a key at [Google AI Studio](https://aistudio.google.com/apikey) and put it in `server/.env` as `GEMINI_API_KEY=...`. The key stays on the server and is never sent to the browser. Without a key the app still works on rules and templates.
 
 **What the AI does**

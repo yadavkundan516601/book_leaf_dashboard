@@ -54,7 +54,8 @@ export interface GeminiProviderOptions {
 
 const LITE_FALLBACKS = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-2.5-flash-lite"];
 // gemini-3.6-flash first: it answered in ~3 s in live tests; gemini-3.8-flash timed out (see README).
-const FLASH_FALLBACKS = ["gemini-3.6-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"];
+// Order = preference when the first is unavailable or out of quota: the proven fast models first, 3.8 last.
+const FLASH_FALLBACKS = ["gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.8-flash", "gemini-2.5-flash"];
 
 /** The configured model first, then known-good fallbacks of the same tier. */
 export function modelCandidates(configured: string): string[] {
@@ -196,6 +197,10 @@ export function createGeminiProvider(opts: GeminiProviderOptions): LlmProvider {
 
   /** configured model id -> model id that answered (process lifetime). */
   const resolvedModel = new Map<string, string>();
+  /** Models whose id the API said does not exist (skipped from then on). */
+  const missing = new Set<string>();
+  /** model id -> when its quota resets. Free-tier daily limits are per model, so a spent model is skipped, not waited on. */
+  const cooldown = new Map<string, number>();
   /** Models that rejected thinkingConfig with a 400. */
   const noThinking = new Set<string>();
 
@@ -236,6 +241,8 @@ export function createGeminiProvider(opts: GeminiProviderOptions): LlmProvider {
           continue;
         }
         if (!RETRYABLE.has(err.kind) || retries >= opts.maxRetries) throw err;
+        // A wait this long is a spent quota (e.g. the daily free-tier limit), not a burst: waiting won't help.
+        if (err.kind === "rate_limited" && (err.retryAfterMs ?? 0) > MAX_RETRY_DELAY_MS) throw err;
         const backoff = BACKOFF_BASE_MS * 2 ** retries * (0.5 + random() / 2);
         const delay = Math.min(MAX_RETRY_DELAY_MS, err.retryAfterMs ?? backoff);
         if (now() + delay >= deadline) throw err;
@@ -252,9 +259,18 @@ export function createGeminiProvider(opts: GeminiProviderOptions): LlmProvider {
     extra: GenerateContentParameters["config"],
     deadline: number,
   ): Promise<{ res: GeminiResponse; model: string }> {
-    const known = resolvedModel.get(req.model);
-    // Trust a model that has answered before, but if it disappears fall through to the rest of the chain.
-    const candidates = known ? [known, ...modelCandidates(req.model).filter((m) => m !== known)] : modelCandidates(req.model);
+    const chain = modelCandidates(req.model);
+    const usable = (m: string) => !missing.has(m) && (cooldown.get(m) ?? 0) <= now();
+    let candidates = chain.filter(usable);
+    if (!candidates.length) {
+      // Everything was ruled out earlier: forget the "missing" verdicts and try the chain once more.
+      missing.clear();
+      candidates = chain.filter(usable);
+      if (!candidates.length) {
+        const soonest = Math.min(...chain.map((m) => (cooldown.get(m) ?? 0) - now()));
+        throw new AiError("rate_limited", "Every candidate Gemini model has used its quota for now", ZERO_USAGE, undefined, Math.max(0, soonest));
+      }
+    }
     let lastErr: AiError | null = null;
     for (const model of candidates) {
       try {
@@ -263,14 +279,21 @@ export function createGeminiProvider(opts: GeminiProviderOptions): LlmProvider {
         return { res, model };
       } catch (e) {
         const err = toGeminiAiError(e);
-        if (err.kind !== "model_not_found") {
-          if (MODEL_EXISTS.has(err.kind)) remember(req.model, model);
-          throw err;
+        if (err.kind === "model_not_found") {
+          missing.add(model);
+          lastErr = err;
+          continue;
         }
-        lastErr = err;
+        if (err.kind === "rate_limited" && (err.retryAfterMs ?? 0) > MAX_RETRY_DELAY_MS) {
+          cooldown.set(model, now() + (err.retryAfterMs ?? 0));
+          opts.log?.warn({ model, resetsInMs: err.retryAfterMs }, `Gemini model ${model} has used its quota, trying the next model`);
+          lastErr = err;
+          continue;
+        }
+        if (MODEL_EXISTS.has(err.kind)) remember(req.model, model);
+        throw err;
       }
     }
-    if (known) resolvedModel.delete(req.model);
     throw lastErr ?? new AiError("model_not_found", `No Gemini model available for ${req.model}`);
   }
 

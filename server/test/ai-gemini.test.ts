@@ -54,7 +54,7 @@ function fakeGemini(steps: Step[], opts: { maxRetries?: number; timeoutMs?: numb
       },
     },
   });
-  return { provider, calls, sleeps, warnings };
+  return { provider, calls, sleeps, warnings, advance: (ms: number) => void (clock += ms) };
 }
 
 describe("gemini provider: structured output", () => {
@@ -133,11 +133,12 @@ describe("gemini provider: errors and retries", () => {
     for (const [e, kind] of table) expect(toGeminiAiError(e).kind, String(e)).toBe(kind);
   });
 
-  it("retries transient failures with backoff, honouring retryDelay capped at 15 s", async () => {
+  it("retries transient failures with backoff, honouring the server's retryDelay up to 15 s", async () => {
     const retryIn = (s: string) => apiError(429, { details: [{ retryDelay: s }] });
-    const f = fakeGemini([retryIn("2s"), retryIn("90s"), ok("done")], { maxRetries: 2, timeoutMs: 60_000 });
+    const f = fakeGemini([retryIn("2s"), retryIn("15s"), ok("done")], { maxRetries: 2, timeoutMs: 60_000 });
     expect((await f.provider.text(REQ)).value).toBe("done");
     expect(f.sleeps).toEqual([2_000, MAX_RETRY_DELAY_MS]);
+    // anything longer than that is a spent quota, not a burst: covered by "spent daily quota" below
 
     const g = fakeGemini([apiError(500), apiError(503), apiError(500)], { maxRetries: 2 });
     await expect(g.provider.text(REQ)).rejects.toMatchObject({ kind: "server" });
@@ -159,7 +160,7 @@ describe("gemini provider: errors and retries", () => {
 describe("gemini provider: model fallback and thinking", () => {
   it("falls back to the next candidate on model_not_found, once, and remembers it", async () => {
     expect(modelCandidates("gemini-3.5-flash-lite")).toEqual(["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-2.5-flash-lite"]);
-    expect(modelCandidates("my-model")).toEqual(["my-model", "gemini-3.6-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"]);
+    expect(modelCandidates("my-model")).toEqual(["my-model", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.8-flash", "gemini-2.5-flash"]);
 
     const f = fakeGemini([apiError(404), ok("one"), ok("two")]);
     const first = await f.provider.text(REQ);
@@ -422,5 +423,45 @@ describe("gemini warm-up", () => {
     await warmUpGemini("k", ["gemini-3.5-flash-lite", "bad-model", "gemini-3.5-flash-lite"], log, provider as never);
     expect(pings).toEqual(["gemini-3.5-flash-lite", "bad-model"]);
     expect(logs).toEqual(["info", "warn"]);
+  });
+});
+
+describe("gemini provider: spent daily quota", () => {
+  const quota = (delay: string) => apiError(429, { status: "RESOURCE_EXHAUSTED", message: "Quota exceeded", details: [{ "@type": "type.googleapis.com/google.rpc.RetryInfo", retryDelay: delay }] });
+
+  it("moves to the next model at once when one has used its daily quota, without sleeping or retrying it", async () => {
+    const f = fakeGemini([quota("81420s"), ok("from the next model"), ok("again")]);
+    const first = await f.provider.text({ ...REQ, model: "gemini-3.6-flash" });
+    expect(first.model).toBe("gemini-3.5-flash-lite");
+    expect(f.sleeps).toEqual([]); // no backoff sleep on a quota-sized wait
+    expect(f.warnings.some((w) => /used its quota/.test(w))).toBe(true);
+    // the spent model is skipped on later calls (no wasted request)
+    await f.provider.text({ ...REQ, model: "gemini-3.6-flash" });
+    expect(f.calls.map((c) => c.model)).toEqual(["gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.5-flash-lite"]);
+  });
+
+  it("tries the preferred model again once its quota has reset", async () => {
+    const f = fakeGemini([quota("3600s"), ok("fallback"), ok("preferred again")]);
+    await f.provider.text({ ...REQ, model: "gemini-3.6-flash" });
+    f.advance(3600_001);
+    const later = await f.provider.text({ ...REQ, model: "gemini-3.6-flash" });
+    expect(later.model).toBe("gemini-3.6-flash");
+    expect(f.calls.map((c) => c.model)).toEqual(["gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.6-flash"]);
+  });
+
+  it("fails with rate_limited and the reset time when every candidate is spent", async () => {
+    const f = fakeGemini([quota("7200s"), quota("7200s"), quota("7200s"), quota("7200s"), quota("7200s")]);
+    const err = await f.provider.text({ ...REQ, model: "gemini-3.6-flash" }).catch((e) => e);
+    expect(err).toMatchObject({ kind: "rate_limited", retryAfterMs: 7_200_000 });
+    const again = await f.provider.text({ ...REQ, model: "gemini-3.6-flash" }).catch((e) => e);
+    expect(again.kind).toBe("rate_limited"); // answered locally, no request
+    expect(f.calls).toHaveLength(5);
+  });
+
+  it("still backs off and retries ordinary short rate limits on the same model", async () => {
+    const f = fakeGemini([quota("2s"), ok("after a short wait")]);
+    const r = await f.provider.text({ ...REQ, model: "gemini-3.6-flash" });
+    expect(r.model).toBe("gemini-3.6-flash");
+    expect(f.sleeps).toEqual([2000]);
   });
 });

@@ -70,6 +70,11 @@ const UNAVAILABLE_DETAIL: Partial<Record<string, string>> = {
 
 export function unavailableNotice(err: AiError): string {
   if (err.reason === "not_configured" || err.reason === "disabled") return NOTICE_NOT_CONFIGURED;
+  // A very long retry hint means a spent daily quota, which is worth saying plainly.
+  if (err.kind === "rate_limited" && (err.retryAfterMs ?? 0) > 60 * 60_000) {
+    const hours = Math.round((err.retryAfterMs ?? 0) / 3_600_000);
+    return `AI drafting is paused: the free daily limit of the AI service is used up (it resets in about ${hours} hours) — this is a policy-based template. Review and personalise before sending.`;
+  }
   const detail = UNAVAILABLE_DETAIL[err.reason ?? err.kind] ?? "the AI service returned an error";
   return `AI drafting is temporarily unavailable (${detail}) — this is a policy-based template. Review and personalise before sending.`;
 }
