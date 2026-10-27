@@ -1,13 +1,16 @@
+import { useMutation } from "@tanstack/react-query";
 import {
   TICKET_CATEGORY_LABELS,
   TICKET_PRIORITY_LABELS,
   type AdminTicketDto,
+  type DraftDto,
+  type DraftRefineInstruction,
   type TicketCategory,
   type TicketPriority,
   type TicketStatus,
   type UpdateTicketInput,
 } from "@bookleaf/shared";
-import { errorMessage } from "../../../api/client";
+import { api, errorMessage } from "../../../api/client";
 import { useUpdateTicket } from "../../../api/hooks";
 import { useToast } from "../../../components/Toast";
 import { useConfirm, type ConfirmOptions } from "../../../components/ui";
@@ -95,4 +98,19 @@ export function useClassificationChange(ticket: AdminTicketDto) {
   };
 
   return { setCategory, setPriority, isPending: undoPending || update.isPending };
+}
+
+export interface RefineDraftInput {
+  instruction: DraftRefineInstruction;
+  /** Required when instruction = custom. */
+  customInstruction?: string;
+  /** The composer's current text. */
+  baseDraft: string;
+}
+
+/** Rewrites the agent's current text with the AI. Never cached server-side; fails with AI_UNAVAILABLE (503) without the AI. */
+export function useRefineDraft(ticketId: string) {
+  return useMutation({
+    mutationFn: (input: RefineDraftInput) => api<DraftDto>(`/tickets/${ticketId}/draft`, { method: "POST", body: { regenerate: false, ...input } }),
+  });
 }

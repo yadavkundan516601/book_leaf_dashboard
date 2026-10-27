@@ -295,9 +295,7 @@ describe("draft service: grounding and checks", () => {
 describe("draft service: refinement", () => {
   const BASE = `Hi Ananya,\n\nYour ₹2,546 is due by 14 Nov 2026. We will get back within 48 hours.\n\n${SIGN_OFF}`;
   type Svc = ReturnType<typeof setup>["svc"];
-  // DraftService declares only `regenerate`; the tickets route passes the whole parsed body, as here.
-  const refine = (svc: Svc, id: string, opts: Partial<GenerateDraftOptions>) =>
-    svc.getDraft(id, { regenerate: false, ...opts } as GenerateDraftOptions);
+  const refine = (svc: Svc, id: string, opts: Partial<GenerateDraftOptions>) => svc.getDraft(id, { regenerate: false, ...opts });
 
   it("always calls the model, never serves or stores the cache, and puts the base draft and task in the prompt", async () => {
     const { svc, calls } = setup();
