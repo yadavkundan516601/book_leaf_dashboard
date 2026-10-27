@@ -193,7 +193,8 @@ describe("POST /ai/answer: cost and resilience", () => {
       sources: [{ id: "royalty", title: "Royalty Policy" }],
       suggestedCategory: "royalty_payments",
     });
-    expect(res.body.answer).toContain("Here is what our Royalty Policy says: 80/20 royalty split");
+    // The sample question asks about payout timing, so the policy lines about the quarterly cycle lead.
+    expect(res.body.answer).toContain("Here is what our Royalty Policy says: Royalties are calculated quarterly and paid within 45 days");
     expect(res.body.answer).toContain("₹3,570 pending");
     expect(res.body.answer).toContain("14 Nov 2026");
   });
@@ -228,5 +229,18 @@ describe("POST /ai/answer: without an AI key", () => {
     } finally {
       await app.close();
     }
+  });
+});
+
+describe("template answer relevance", () => {
+  it("leads with the policy lines that match the question, not just the first two", async () => {
+    const { pickRelevantBullets } = await import("../src/ai/answer-service.js");
+    const { KB_SECTIONS } = await import("../src/ai/knowledge-base.js");
+    const royalty = KB_SECTIONS.find((s) => s.id === "royalty")!;
+    const lines = pickRelevantBullets(royalty, "When will my pending royalty be paid out and how does the payout work?");
+    expect(lines.join(" ")).toMatch(/quarterly|45 days|bank transfer|payout/i);
+    expect(lines.join(" ")).not.toMatch(/80\/20/);
+    // no overlap at all: falls back to the first two lines
+    expect(pickRelevantBullets(royalty, "zzz qqq")).toEqual(pickRelevantBullets(royalty, ""));
   });
 });

@@ -181,6 +181,33 @@ const bullets = (section: KbSection) =>
     .map((l) => l.replace(/^\s*-\s*/, "").trim())
     .filter(Boolean);
 
+const STOPWORDS = new Set("the a an is are was were be to of and or in on for with my me i it this that when how what why will can do does did you your our we at as by from have has had not no".split(" "));
+/** Lower-cased content words with a crude plural strip so "payouts" matches "payout". */
+const words = (text: string) =>
+  (text.toLowerCase().match(/[a-z₹0-9']+/g) ?? [])
+    .filter((w) => w.length > 2 && !STOPWORDS.has(w))
+    .map((w) => (w.length > 4 && w.endsWith("ies") ? `${w.slice(0, -3)}y` : w.length > 4 && w.endsWith("s") ? w.slice(0, -1) : w));
+
+/**
+ * The policy lines that best match the question, kept in their original order; falls back to the first
+ * two. Matches are weighted by how rare the word is across the section's lines, so a topic word that
+ * appears in every line ("royalty") doesn't outweigh the one that decides the question ("paid", "payout").
+ */
+export function pickRelevantBullets(section: KbSection, question: string, count = 2): string[] {
+  const all = bullets(section);
+  const lineWords = all.map((line) => new Set(words(line)));
+  const q = new Set(words(question));
+  const df = (w: string) => lineWords.filter((set) => set.has(w)).length;
+  const scored = all.map((line, index) => ({
+    line,
+    index,
+    score: [...lineWords[index]!].filter((w) => q.has(w)).reduce((sum, w) => sum + 1 / df(w), 0),
+  }));
+  const best = scored.filter((x) => x.score > 0).sort((x, y) => y.score - x.score || x.index - y.index).slice(0, count);
+  const chosen = best.length ? best : scored.slice(0, count);
+  return chosen.sort((x, y) => x.index - y.index).map((x) => x.line);
+}
+
 function accountLine(category: TicketCategory, f: AnswerFacts): string | null {
   const b = f.book;
   switch (category) {
@@ -214,7 +241,7 @@ function templateAnswer(
   opts: { matchedRules: boolean; text: string; notice: string },
 ): AnswerDto {
   const best = sections[0] ?? KB_SECTIONS.find((s) => s.id === "company")!;
-  const paragraphs = [`Here is what our ${best.title} says: ${bullets(best).slice(0, 2).join(" ")}`];
+  const paragraphs = [`Here is what our ${best.title} says: ${pickRelevantBullets(best, opts.text).join(" ")}`];
   const account = accountLine(category, facts);
   if (account) paragraphs.push(account);
   paragraphs.push("If this doesn't answer your question, send your query and our team will look into it.");
