@@ -77,7 +77,9 @@ Along the way you can change the category or priority (your change is marked *Ad
 
 ## How the AI works
 
-**Provider: Google Gemini** (free tier works). Classification runs on `gemini-3.5-flash-lite` and drafts/answers on `gemini-3.8-flash` by default; change them with `AI_CLASSIFY_MODEL` / `AI_DRAFT_MODEL`. If a model id isn't available to your key, the app automatically falls back to the next Gemini model and remembers the one that works. Anthropic Claude is still supported as an alternative (`AI_PROVIDER=anthropic` with `ANTHROPIC_API_KEY`).
+**Provider: Google Gemini** (free tier works). Classification runs on `gemini-3.5-flash-lite` and drafts and answers on `gemini-3.6-flash` by default; change them with `AI_CLASSIFY_MODEL` / `AI_DRAFT_MODEL`. If a model id isn't available to your key, the app automatically falls back to the next Gemini model and remembers the one that works. Anthropic Claude is still supported as an alternative (`AI_PROVIDER=anthropic` with `ANTHROPIC_API_KEY`).
+
+**Tested live:** with a real key, triage took 2–5 s and drafts 3–8 s, the refine buttons and instant answer worked, and every figure in the replies matched the author's data. `gemini-3.8-flash` was listed in Google's docs but timed out in testing, so it is not used by default; models also warm up at startup because the first request after idle can be slow.
 
 **Set it up:** create a key at [Google AI Studio](https://aistudio.google.com/apikey) and put it in `server/.env` as `GEMINI_API_KEY=...`. The key stays on the server and is never sent to the browser. Without a key the app still works on rules and templates.
 

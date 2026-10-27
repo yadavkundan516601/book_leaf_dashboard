@@ -1,5 +1,5 @@
 import { createApp } from "./app.js";
-import { checkGeminiModels } from "./ai/gemini-provider.js";
+import { checkGeminiModels, warmUpGemini } from "./ai/gemini-provider.js";
 import { bootstrap } from "./bootstrap.js";
 
 const ctx = await bootstrap();
@@ -14,7 +14,8 @@ const server = app.listen(ctx.env.PORT, () => {
 
 // Diagnostic only: log which Gemini model candidates this key can use (fallback still resolves on first call).
 if (ctx.ai.status.provider() === "gemini" && ctx.env.GEMINI_API_KEY && !ctx.env.AI_DISABLED) {
-  void checkGeminiModels(ctx.env.GEMINI_API_KEY, [ctx.env.AI_CLASSIFY_MODEL, ctx.env.AI_DRAFT_MODEL], ctx.log);
+  const models = [ctx.env.AI_CLASSIFY_MODEL, ctx.env.AI_DRAFT_MODEL];
+  void checkGeminiModels(ctx.env.GEMINI_API_KEY, models, ctx.log).then(() => warmUpGemini(ctx.env.GEMINI_API_KEY!, models, ctx.log));
 }
 
 // Pick up tickets whose classification didn't finish before the last shutdown.

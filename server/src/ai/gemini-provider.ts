@@ -53,7 +53,8 @@ export interface GeminiProviderOptions {
 }
 
 const LITE_FALLBACKS = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-2.5-flash-lite"];
-const FLASH_FALLBACKS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"];
+// gemini-3.6-flash first: it answered in ~3 s in live tests; gemini-3.8-flash timed out (see README).
+const FLASH_FALLBACKS = ["gemini-3.6-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"];
 
 /** The configured model first, then known-good fallbacks of the same tier. */
 export function modelCandidates(configured: string): string[] {
@@ -61,6 +62,8 @@ export function modelCandidates(configured: string): string[] {
   return [configured, ...fallbacks.filter((m) => m !== configured)];
 }
 
+/** Smallest X-Server-Timeout the Gemini API accepts. */
+export const MIN_SERVER_DEADLINE_MS = 10_000;
 const BACKOFF_BASE_MS = 500;
 /** Longest single wait between attempts, whatever the server suggests. */
 export const MAX_RETRY_DELAY_MS = 15_000;
@@ -219,7 +222,10 @@ export function createGeminiProvider(opts: GeminiProviderOptions): LlmProvider {
             ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
             ...(thinkingConfig ? { thinkingConfig } : {}),
             ...extra,
-            httpOptions: { timeout: remaining },
+            // Google rejects a server deadline under 10 s ("deadline 1s is too short"), which is what a retry
+            // late in the budget would send. Below that, skip the header and enforce the limit on our side.
+            ...(remaining >= MIN_SERVER_DEADLINE_MS ? { httpOptions: { timeout: remaining } } : {}),
+            abortSignal: AbortSignal.timeout(remaining),
           },
         });
       } catch (e) {
@@ -359,5 +365,23 @@ export async function checkGeminiModels(apiKey: string, configured: string[], lo
     const candidates = modelCandidates(model).map((m) => ({ model: m, available: available.includes(m) }));
     const level = candidates[0]!.available ? "info" : "warn";
     log[level]({ configured: model, candidates }, "Gemini model availability");
+  }
+}
+
+/**
+ * First request to a Gemini model after idle can take 20 s+ (observed live on the free tier), which would hit the
+ * request timeout and push the first admin to a template. Sending a tiny request per model at startup absorbs that
+ * cold start. Best effort: failures are only logged, and it bypasses the limiter, breaker and call log on purpose.
+ */
+export async function warmUpGemini(apiKey: string, models: string[], log: Logger, provider?: LlmProvider): Promise<void> {
+  const p = provider ?? createGeminiProvider({ apiKey, timeoutMs: 60_000, maxRetries: 0 });
+  for (const model of new Set(models)) {
+    const started = Date.now();
+    try {
+      const r = await p.text({ model, system: "Reply with one word.", user: "ping", maxTokens: 8, thinking: "off" });
+      log.info({ model: r.model, ms: Date.now() - started }, "Gemini model warmed up");
+    } catch (err) {
+      log.warn({ model, ms: Date.now() - started, kind: (err as { kind?: string }).kind }, "Gemini warm-up failed (first real request may be slow)");
+    }
   }
 }

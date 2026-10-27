@@ -50,7 +50,7 @@ const envSchema = z
     /** Default per provider (see resolveAiConfig). */
     AI_CLASSIFY_MODEL: z.string().min(1).optional(),
     AI_DRAFT_MODEL: z.string().min(1).optional(),
-    AI_TIMEOUT_MS: z.coerce.number().int().positive().default(20_000),
+    AI_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
     AI_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
     /** Consecutive failures before the circuit opens, and how long it stays open. */
     AI_BREAKER_THRESHOLD: z.coerce.number().int().positive().default(3),
@@ -82,7 +82,7 @@ const envSchema = z
 export type AiProviderName = "gemini" | "anthropic";
 
 const DEFAULT_MODELS: Record<AiProviderName, { classify: string; draft: string }> = {
-  gemini: { classify: "gemini-3.5-flash-lite", draft: "gemini-3.8-flash" },
+  gemini: { classify: "gemini-3.5-flash-lite", draft: "gemini-3.6-flash" },
   anthropic: { classify: "claude-haiku-4-5", draft: "claude-haiku-4-5" },
 };
 

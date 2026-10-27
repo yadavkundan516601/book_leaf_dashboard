@@ -10,7 +10,7 @@ BookLeaf's problem is **throughput and consistency of author communication**, so
 5. **Zero-friction review.** `npm install` and `npm run dev` work with no database server (embedded Postgres), seeded from the exact dataset, with one-click demo logins.
 
 ## Trade-offs I made
-- **Gemini Flash-Lite for triage, Gemini Flash for drafts.** Fast, free-tier friendly, and JSON-schema structured output for triage. Models are configurable per task and fall back automatically if an id is unavailable; Anthropic Claude remains a drop-in alternative behind the same provider interface.
+- **Gemini Flash-Lite for triage, Gemini 3.6 Flash for drafts.** Fast, free-tier friendly, and JSON-schema structured output for triage. Models are configurable per task and fall back automatically if an id is unavailable; Anthropic Claude remains a drop-in alternative behind the same provider interface.
 - **Sectioned keyword retrieval instead of embeddings.** The KB is small and well structured, so category + keyword routing is deterministic, testable and free. Embeddings become worthwhile when the KB grows to hundreds of articles.
 - **In-process queue and event bus.** These are simple and restart-safe because the database is the source of truth. The trade-off is a single instance (see below).
 - **SSE over WebSockets.** Updates only flow server → client, SSE works over plain HTTP with cookie auth and auto-reconnect, and polling covers the gap.

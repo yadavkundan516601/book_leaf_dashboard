@@ -3,7 +3,7 @@ import { ApiError, ThinkingLevel, type GenerateContentParameters } from "@google
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { CircuitBreaker } from "../src/ai/circuit-breaker.js";
-import { createGeminiProvider, MAX_RETRY_DELAY_MS, modelCandidates, outputHeadroom, thinkingConfigFor, toGeminiAiError, type GeminiResponse } from "../src/ai/gemini-provider.js";
+import { createGeminiProvider, MAX_RETRY_DELAY_MS, modelCandidates, outputHeadroom, thinkingConfigFor, toGeminiAiError, warmUpGemini, type GeminiResponse } from "../src/ai/gemini-provider.js";
 import { createGuardedLlm } from "../src/ai/llm-client.js";
 import { estimateCostUsd } from "../src/ai/pricing.js";
 import { AiError } from "../src/ai/provider.js";
@@ -159,7 +159,7 @@ describe("gemini provider: errors and retries", () => {
 describe("gemini provider: model fallback and thinking", () => {
   it("falls back to the next candidate on model_not_found, once, and remembers it", async () => {
     expect(modelCandidates("gemini-3.5-flash-lite")).toEqual(["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-2.5-flash-lite"]);
-    expect(modelCandidates("my-model")).toEqual(["my-model", "gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"]);
+    expect(modelCandidates("my-model")).toEqual(["my-model", "gemini-3.6-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"]);
 
     const f = fakeGemini([apiError(404), ok("one"), ok("two")]);
     const first = await f.provider.text(REQ);
@@ -326,7 +326,7 @@ describe("AI provider config", () => {
 
   it("applies the GOOGLE_API_KEY fallback, provider default models and the free-tier default", () => {
     const g = env({ GOOGLE_API_KEY: "google-key" });
-    expect(g).toMatchObject({ GEMINI_API_KEY: "google-key", AI_CLASSIFY_MODEL: "gemini-3.5-flash-lite", AI_DRAFT_MODEL: "gemini-3.8-flash", AI_FREE_TIER: true });
+    expect(g).toMatchObject({ GEMINI_API_KEY: "google-key", AI_CLASSIFY_MODEL: "gemini-3.5-flash-lite", AI_DRAFT_MODEL: "gemini-3.6-flash", AI_FREE_TIER: true });
     expect(env({ GEMINI_API_KEY: "a", GOOGLE_API_KEY: "b" }).GEMINI_API_KEY).toBe("a");
     expect(env({ ANTHROPIC_API_KEY: "a" })).toMatchObject({ AI_CLASSIFY_MODEL: "claude-haiku-4-5", AI_DRAFT_MODEL: "claude-haiku-4-5", AI_FREE_TIER: false });
     expect(env({ GEMINI_API_KEY: "g", AI_CLASSIFY_MODEL: "gemini-x", AI_FREE_TIER: "false" })).toMatchObject({ AI_CLASSIFY_MODEL: "gemini-x", AI_FREE_TIER: false });
@@ -388,5 +388,39 @@ describe("env template", () => {
 
   it("refuses to start in production while required secrets are still placeholders", () => {
     expect(() => loadEnv({ NODE_ENV: "production", JWT_SECRET: "<RANDOM_SECRET_32_CHARS_OR_MORE>", DATABASE_URL: "<POSTGRES_URL>" })).toThrow(/JWT_SECRET[\s\S]*DATABASE_URL|DATABASE_URL[\s\S]*JWT_SECRET/);
+  });
+});
+
+describe("gemini provider: request deadlines", () => {
+  it("sends a server deadline of at least 10 s, and none (client abort only) when less time is left", async () => {
+    const f = fakeGemini([ok("hi")], { timeoutMs: 20_000 });
+    await f.provider.text(REQ);
+    expect(f.calls[0]!.config!.httpOptions?.timeout).toBeGreaterThanOrEqual(10_000);
+    expect(f.calls[0]!.config!.abortSignal).toBeInstanceOf(AbortSignal);
+
+    // Live API behaviour: "Manually set deadline 1s is too short. Minimum allowed deadline is 10s."
+    const short = fakeGemini([ok("hi")], { timeoutMs: 4_000 });
+    await short.provider.text(REQ);
+    expect(short.calls[0]!.config!.httpOptions).toBeUndefined();
+    expect(short.calls[0]!.config!.abortSignal).toBeInstanceOf(AbortSignal);
+  });
+});
+
+describe("gemini warm-up", () => {
+  it("pings each distinct model once and never throws, even when a ping fails", async () => {
+    const pings: string[] = [];
+    const logs: string[] = [];
+    const provider = {
+      structured: async () => { throw new Error("unused"); },
+      text: async (req: { model: string }) => {
+        pings.push(req.model);
+        if (req.model === "bad-model") throw new AiError("timeout", "slow");
+        return { value: "pong", usage: { inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0 }, model: req.model, stopReason: "STOP" };
+      },
+    };
+    const log = { info: () => logs.push("info"), warn: () => logs.push("warn") } as never;
+    await warmUpGemini("k", ["gemini-3.5-flash-lite", "bad-model", "gemini-3.5-flash-lite"], log, provider as never);
+    expect(pings).toEqual(["gemini-3.5-flash-lite", "bad-model"]);
+    expect(logs).toEqual(["info", "warn"]);
   });
 });
