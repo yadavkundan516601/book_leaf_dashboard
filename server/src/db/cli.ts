@@ -8,7 +8,7 @@ import { seed } from "./seed.js";
 const command = process.argv[2];
 const env = loadEnv();
 const log = createLogger(env.LOG_LEVEL, true);
-const handle = await createDb({ databaseUrl: env.DATABASE_URL, sslCa: resolveDatabaseCa(env), pgliteDataDir: env.PGLITE_DATA_DIR });
+const handle = await createDb({ databaseUrl: env.DATABASE_URL, sslCa: resolveDatabaseCa(env, process.cwd(), env.DATABASE_URL), pgliteDataDir: env.PGLITE_DATA_DIR });
 try {
   if (command === "migrate" || command === "seed") await handle.migrate();
   if (command === "seed") {

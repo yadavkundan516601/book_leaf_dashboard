@@ -33,6 +33,22 @@ describe("startup error explanations", () => {
     expect(text).toMatch(/repository root/);
   });
 
+  it("explains the Render/Aiven 'no encryption' rejection from the deploy log", () => {
+    const err = Object.assign(new Error("Failed query"), {
+      cause: Object.assign(new Error('no pg_hba.conf entry for host "74.220.48.72", user "avnadmin", database "defaultdb", no encryption'), { code: "28000" }),
+    });
+    const text = explainStartupError(err, URL_WITH_SECRETS)!;
+    expect(text).toMatch(/not encrypted/);
+    expect(text).toContain("DATABASE_SSL_CA_FILE=aiven-ca.pem");
+    expect(text).toContain("sslmode=false");
+  });
+
+  it("explains a rejected address/login when the connection WAS encrypted", () => {
+    const text = explainStartupError(new Error('no pg_hba.conf entry for host "1.2.3.4", user "u", database "d", SSL encryption'))!;
+    expect(text).toMatch(/does not accept this server's address/);
+    expect(text).toMatch(/allow this server's outbound IP/);
+  });
+
   it("returns null for anything else so the full stack trace is kept", () => {
     expect(explainStartupError(new Error("something unexpected"))).toBeNull();
   });

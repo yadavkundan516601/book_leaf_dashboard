@@ -7,6 +7,19 @@ import path from "node:path";
 import type { PoolConfig } from "pg";
 import type { Env } from "../config/env.js";
 
+/** Certificate file name looked up at the repo root for Aiven databases when none is configured. */
+export const AIVEN_DEFAULT_CA_FILE = "aiven-ca.pem";
+
+/** True for Aiven-hosted databases (host ends with aivencloud.com). */
+export function isAivenHost(databaseUrl: string | undefined): boolean {
+  if (!databaseUrl) return false;
+  try {
+    return new URL(databaseUrl).hostname.toLowerCase().endsWith(".aivencloud.com");
+  } catch {
+    return false;
+  }
+}
+
 /** The monorepo root: the nearest parent of `from` whose package.json declares workspaces. */
 function findRepoRoot(from: string): string | null {
   let dir = path.resolve(from);
@@ -38,9 +51,19 @@ export function caFileCandidates(file: string, cwd: string): string[] {
 }
 
 /** The CA certificate text (PEM) from DATABASE_SSL_CA or DATABASE_SSL_CA_FILE, or undefined when neither is set. */
-export function resolveDatabaseCa(env: Pick<Env, "DATABASE_SSL_CA" | "DATABASE_SSL_CA_FILE">, cwd = process.cwd()): string | undefined {
+export function resolveDatabaseCa(
+  env: Pick<Env, "DATABASE_SSL_CA" | "DATABASE_SSL_CA_FILE">,
+  cwd = process.cwd(),
+  databaseUrl?: string,
+): string | undefined {
   if (env.DATABASE_SSL_CA) return env.DATABASE_SSL_CA.replace(/\\n/g, "\n").trim();
-  if (!env.DATABASE_SSL_CA_FILE) return undefined;
+  if (!env.DATABASE_SSL_CA_FILE) {
+    // Aiven only accepts encrypted connections and signs with its own CA: use the committed root certificate
+    // when nothing was configured, so a missing environment variable on the host cannot break the deploy.
+    if (!isAivenHost(databaseUrl)) return undefined;
+    const found = caFileCandidates(AIVEN_DEFAULT_CA_FILE, cwd).find((c) => existsSync(c));
+    return found ? readFileSync(found, "utf8").trim() : undefined;
+  }
   const candidates = caFileCandidates(env.DATABASE_SSL_CA_FILE, cwd);
   const file = candidates.find((c) => existsSync(c));
   if (!file) {
@@ -58,8 +81,18 @@ export function resolveDatabaseCa(env: Pick<Env, "DATABASE_SSL_CA" | "DATABASE_S
  * turn verification back off (or on, against the wrong store).
  */
 export function buildPoolConfig(databaseUrl: string, ca?: string): PoolConfig {
-  if (!ca) return { connectionString: databaseUrl };
-  const url = new URL(databaseUrl);
-  for (const key of ["sslmode", "uselibpqcompat", "sslrootcert", "sslcert", "sslkey"]) url.searchParams.delete(key);
-  return { connectionString: url.toString(), ssl: { ca, rejectUnauthorized: true } };
+  const SSL_PARAMS = ["sslmode", "uselibpqcompat", "sslrootcert", "sslcert", "sslkey"];
+  if (ca) {
+    const url = new URL(databaseUrl);
+    for (const key of SSL_PARAMS) url.searchParams.delete(key);
+    return { connectionString: url.toString(), ssl: { ca, rejectUnauthorized: true } };
+  }
+  // Aiven rejects unencrypted connections ("no pg_hba.conf entry ... no encryption"), so never send one, even if
+  // the URL says sslmode=false/disable or omits it. Without a CA the certificate cannot be verified.
+  if (isAivenHost(databaseUrl) && !/sslmode=(require|verify-ca|verify-full|no-verify)/.test(databaseUrl)) {
+    const url = new URL(databaseUrl);
+    for (const key of SSL_PARAMS) url.searchParams.delete(key);
+    return { connectionString: url.toString(), ssl: { rejectUnauthorized: false } };
+  }
+  return { connectionString: databaseUrl };
 }

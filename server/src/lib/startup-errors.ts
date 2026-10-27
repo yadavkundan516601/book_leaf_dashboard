@@ -38,6 +38,18 @@ export function explainStartupError(err: unknown, databaseUrl?: string): string 
   const target = describeDatabaseTarget(databaseUrl);
   const where = target ? ` (${target})` : "";
 
+  if (/no pg_hba\.conf entry/i.test(text)) {
+    if (/no encryption/i.test(text)) {
+      return [
+        `The database${where} refused the connection because it was not encrypted.`,
+        "Managed databases (Aiven, Render, RDS ...) require TLS. Fix: set DATABASE_SSL_CA_FILE=aiven-ca.pem (certificate committed at the repo root), or end DATABASE_URL with ?sslmode=require. A value like sslmode=false turns encryption off.",
+      ].join("\n");
+    }
+    return [
+      `The database${where} does not accept this server's address or login.`,
+      "Fix: in your database provider, allow this server's outbound IP address (on Render, the outbound IPs are listed under the service's Connect menu), and check the username and database name.",
+    ].join("\n");
+  }
   if (/DATABASE_SSL_CA_FILE/.test(text) && /was not found/.test(text)) {
     return [
       "The database CA certificate file named in DATABASE_SSL_CA_FILE was not found.",

@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildPoolConfig, resolveDatabaseCa } from "../src/db/ssl.js";
+import { buildPoolConfig, isAivenHost, resolveDatabaseCa } from "../src/db/ssl.js";
 
 const PEM = "-----BEGIN CERTIFICATE-----\nABC\n-----END CERTIFICATE-----";
 const URL_ = "postgres://user:p%40ss@db.example.com:19156/app?sslmode=require&uselibpqcompat=true&application_name=bookleaf";
@@ -59,5 +59,40 @@ describe("CA file lookup from the repository root", () => {
     const run = () => resolveDatabaseCa({ DATABASE_SSL_CA_FILE: "certs/aiven-ca.pem" }, path.join(root, "server"));
     expect(run).toThrow(/was not found/);
     expect(run).toThrow(/Commit the certificate at the repository root/);
+  });
+});
+
+describe("Aiven defaults (a deploy must not depend on one environment variable)", () => {
+  const AIVEN = "postgres://avnadmin:pw@pg-demo-x.l.aivencloud.com:19156/defaultdb";
+
+  it("recognises Aiven hosts only", () => {
+    expect(isAivenHost(AIVEN)).toBe(true);
+    expect(isAivenHost("postgres://u:p@dpg-abc-a.oregon-postgres.render.com/db")).toBe(false);
+    expect(isAivenHost("postgres://u:p@localhost:5432/db")).toBe(false);
+    expect(isAivenHost(undefined)).toBe(false);
+  });
+
+  it("picks up the committed root certificate automatically for an Aiven URL", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "repo-"));
+    writeFileSync(path.join(root, "package.json"), JSON.stringify({ workspaces: ["server"] }));
+    mkdirSync(path.join(root, "server"));
+    writeFileSync(path.join(root, "aiven-ca.pem"), `${PEM}\n`);
+    expect(resolveDatabaseCa({}, path.join(root, "server"), AIVEN)).toBe(PEM);
+    expect(resolveDatabaseCa({}, path.join(root, "server"), "postgres://u:p@db.example.com/x")).toBeUndefined();
+    expect(resolveDatabaseCa({}, path.join(root, "server"))).toBeUndefined();
+  });
+
+  it("never sends an unencrypted connection to Aiven, whatever the URL says", () => {
+    for (const url of [AIVEN, `${AIVEN}?sslmode=false`, `${AIVEN}?sslmode=disable`]) {
+      const cfg = buildPoolConfig(url);
+      expect(cfg.ssl, url).toEqual({ rejectUnauthorized: false });
+      expect(new URL(cfg.connectionString!).searchParams.has("sslmode"), url).toBe(false);
+    }
+  });
+
+  it("leaves an Aiven URL that already asks for TLS, and other databases, as written", () => {
+    const ok = `${AIVEN}?sslmode=require&uselibpqcompat=true`;
+    expect(buildPoolConfig(ok)).toEqual({ connectionString: ok });
+    expect(buildPoolConfig("postgres://u:p@localhost:5432/x")).toEqual({ connectionString: "postgres://u:p@localhost:5432/x" });
   });
 });
