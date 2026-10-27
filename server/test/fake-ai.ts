@@ -55,7 +55,7 @@ export function fakeAi(): FakeAi {
         getDraft: async (ticketId, opts) => {
           fake.drafted.push({ ticketId, regenerate: opts.regenerate });
           // The tickets route passes the whole parsed request body (instruction, baseDraft, ...).
-          fake.draftRequests.push({ ticketId, ...(opts as GenerateDraftOptions) });
+          fake.draftRequests.push({ ticketId, ...opts });
           return {
             grounding: EMPTY_DRAFT_GROUNDING,
             warnings: [],

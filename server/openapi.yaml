@@ -367,10 +367,19 @@ paths:
       - $ref: "#/components/parameters/TicketId"
     post:
       tags: [Tickets]
-      summary: Get an AI response draft (admin)
+      summary: Get or refine an AI response draft (admin)
       description: |
         Returns the cached draft for the ticket's current state, generating one if needed. When the AI
         is unavailable a knowledge-base template is returned with `source: template` and a `notice`.
+
+        With `instruction`, rewrites the admin's current text (`baseDraft`) instead: shorter, warmer,
+        clearer, with next steps, or per a `customInstruction`. Refinement always calls the model and is
+        never cached or stored. It has no template fallback, so when the AI is unavailable it fails with
+        503 `AI_UNAVAILABLE` and the admin keeps their text.
+
+        Every draft carries its `grounding` (the figures, dates and timelines a reply to this ticket may
+        quote) and the result of checking the body against it (`warnings`, `checklist`), so a client can
+        re-run the same check as the admin edits.
       requestBody:
         required: false
         content:
@@ -386,6 +395,17 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "503":
+          description: A refinement was requested but the AI is not configured or temporarily unavailable.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              examples:
+                aiUnavailable:
+                  value:
+                    error:
+                      code: AI_UNAVAILABLE
+                      message: "AI drafting is temporarily unavailable, so the reply can't be refined right now. Your text is unchanged; edit it directly."
 
   /tickets/{id}/reclassify:
     parameters:
@@ -596,7 +616,7 @@ components:
             code:
               type: string
               description: Stable machine-readable code.
-              examples: [VALIDATION_ERROR, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, TICKET_CLOSED, RATE_LIMITED, INTERNAL_ERROR]
+              examples: [VALIDATION_ERROR, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, TICKET_CLOSED, RATE_LIMITED, AI_UNAVAILABLE, INTERNAL_ERROR]
             message: { type: string, description: "Human-readable, safe to display." }
             details:
               description: For VALIDATION_ERROR, a list of field problems.
@@ -744,6 +764,20 @@ components:
       type: object
       properties:
         regenerate: { type: boolean, default: false, description: "Force a fresh generation instead of the cached draft." }
+        instruction:
+          type: string
+          enum: [shorter, warmer, clearer, add_next_steps, custom]
+          description: "Refine `baseDraft` instead of drafting from scratch. Requires `baseDraft`; `custom` also requires `customInstruction`."
+        customInstruction:
+          type: string
+          minLength: 1
+          maxLength: 300
+          description: "Free-text refinement for `instruction: custom`, e.g. \"Mention the dashboard\". Trimmed before validation."
+        baseDraft:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: "The admin's current text to refine. Trimmed before validation."
 
     TicketMessage:
       type: object
@@ -926,7 +960,7 @@ components:
 
     Draft:
       type: object
-      required: [ticketId, body, source, model, notice, kbSections, createdAt, cached]
+      required: [ticketId, body, source, model, notice, kbSections, createdAt, cached, grounding, warnings, checklist]
       properties:
         ticketId: { type: string, format: uuid }
         body: { type: string }
@@ -936,6 +970,47 @@ components:
         kbSections: { type: array, items: { type: string }, description: "Knowledge-base sections the draft is grounded on." }
         createdAt: { type: string, format: date-time }
         cached: { type: boolean }
+        grounding: { $ref: "#/components/schemas/DraftGrounding" }
+        warnings:
+          type: array
+          items: { $ref: "#/components/schemas/DraftWarning" }
+          description: "Figures in `body` that the grounding does not back, in order of appearance."
+        checklist:
+          type: array
+          items: { $ref: "#/components/schemas/DraftChecklistItem" }
+          description: "House-style checks for `body`: greeting, empathy, fact, next_step, sign_off, length."
+
+    DraftGrounding:
+      type: object
+      description: What a reply to this ticket may quote. Built from the author's data, the knowledge base and the author's own messages.
+      required: [firstName, amounts, dates, numbers, allowedPhrases]
+      properties:
+        firstName: { type: [string, "null"], description: "The author's first name, for the greeting check." }
+        amounts: { type: array, items: { type: number }, description: "INR amounts the reply may quote." }
+        dates: { type: array, items: { type: string, format: date }, description: "ISO dates the reply may quote." }
+        numbers: { type: array, items: { type: number }, description: "Other allowed numbers (copies sold, counts, figures the author stated)." }
+        allowedPhrases: { type: array, items: { type: string }, description: "Allowed timelines such as \"45 days\" or \"24–48 hours\"." }
+
+    DraftWarning:
+      type: object
+      description: A figure in the reply that the grounding does not back.
+      required: [kind, severity, text, message, start, end]
+      properties:
+        kind: { type: string, enum: [amount, date, duration, percent, format] }
+        severity: { type: string, enum: [high, medium, low] }
+        text: { type: string, description: "The offending snippet exactly as it appears in the body." }
+        message: { type: string, description: "Human-readable explanation, safe to display." }
+        start: { type: integer, minimum: 0, description: "Character offset of the snippet in the body." }
+        end: { type: integer, minimum: 0, description: "Character offset just past the snippet: body.slice(start, end) === text." }
+
+    DraftChecklistItem:
+      type: object
+      required: [id, label, passed, hint]
+      properties:
+        id: { type: string, enum: [greeting, empathy, fact, next_step, sign_off, length] }
+        label: { type: string }
+        passed: { type: boolean }
+        hint: { type: string, description: "How to satisfy the item when it is missing." }
 
     AnswerRequest:
       type: object

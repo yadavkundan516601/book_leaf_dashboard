@@ -6,8 +6,10 @@
  * Contract: nothing here throws because the LLM failed. Classification falls
  * back to deterministic rules; drafts fall back to KB-based templates. Callers
  * only see errors for genuinely bad input (e.g. unknown ticket id -> NotFound).
+ * The one exception is draft refinement, which has no template equivalent and
+ * fails with 503 AI_UNAVAILABLE.
  */
-import type { AnswerDto, AnswerRequest, DraftDto } from "@bookleaf/shared";
+import type { AnswerDto, AnswerRequest, DraftDto, GenerateDraftOptions } from "@bookleaf/shared";
 
 export interface ClassificationQueue {
   /** Fire-and-forget: classify the ticket in the background, persist, emit `ticket.classified`. */
@@ -21,8 +23,11 @@ export interface ClassificationQueue {
 }
 
 export interface DraftService {
-  /** Returns the cached draft for the ticket's current state, generating one if needed. */
-  getDraft(ticketId: string, opts: { regenerate: boolean }): Promise<DraftDto>;
+  /**
+   * Returns the cached draft for the ticket's current state, generating one if needed. With `instruction`
+   * it refines `baseDraft` instead (always calls the model, never cached; 503 AI_UNAVAILABLE without the AI).
+   */
+  getDraft(ticketId: string, opts: GenerateDraftOptions): Promise<DraftDto>;
 }
 
 export interface AiStatus {
