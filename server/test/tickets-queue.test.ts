@@ -137,6 +137,23 @@ describe("admin queue", () => {
   });
 });
 
+describe("escalation in the urgency sort", () => {
+  it("ranks escalated unresolved tickets first within their priority, and never above a higher priority", async () => {
+    // G and B are both critical (G older, so first). Escalating B lifts it above G only.
+    await t.ctx.db.update(tickets).set({ aiEscalate: true }).where(eq(tickets.id, ids.B!));
+    // A is low: escalating it must not lift it above medium D.
+    await t.ctx.db.update(tickets).set({ aiEscalate: true }).where(eq(tickets.id, ids.A!));
+    // E is resolved: escalation does not pull it out of the resolved tail.
+    await t.ctx.db.update(tickets).set({ aiEscalate: true }).where(eq(tickets.id, ids.E!));
+    try {
+      expect(keysOf(await queue())).toBe("BGFCDAE");
+    } finally {
+      await t.ctx.db.update(tickets).set({ aiEscalate: false });
+    }
+    expect(keysOf(await queue())).toBe("GBFCDAE");
+  });
+});
+
 describe("author list", () => {
   it("is always scoped to the author, ignoring admin-only filters", async () => {
     const res = await priya.get("/api/v1/tickets").query({ authorId: "AUTH002" });

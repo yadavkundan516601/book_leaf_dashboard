@@ -82,8 +82,18 @@ export const slaBreachedSql = (now: Date) =>
   sql`(${isUnresolvedSql} and ${tickets.firstRespondedAt} is null and ${tickets.priority} is not null
     and ${tickets.createdAt} + make_interval(hours => ${slaHoursSql}) < ${now.toISOString()}::timestamptz)`;
 
+/**
+ * Urgency: unresolved first, then priority, then (within the same priority)
+ * tickets the classifier flagged for escalation, then oldest first.
+ */
 const ORDER_BY: Record<TicketSort, SQL[]> = {
-  urgency: [sql`case when ${isUnresolvedSql} then 0 else 1 end`, sql`${priorityRankSql} desc`, asc(tickets.createdAt), asc(tickets.number)],
+  urgency: [
+    sql`case when ${isUnresolvedSql} then 0 else 1 end`,
+    sql`${priorityRankSql} desc`,
+    sql`case when ${isUnresolvedSql} and ${tickets.aiEscalate} then 0 else 1 end`,
+    asc(tickets.createdAt),
+    asc(tickets.number),
+  ],
   newest: [desc(tickets.createdAt), desc(tickets.number)],
   oldest: [asc(tickets.createdAt), asc(tickets.number)],
   updated: [desc(tickets.updatedAt), desc(tickets.number)],

@@ -36,6 +36,12 @@ export function fakeAi(): FakeAi {
               classificationConfidence: 0.9,
               classificationRationale: "fake",
               classifiedAt: FIXED_NOW,
+              aiSentiment: "frustrated",
+              aiSummary: "FAKE-TRIAGE-SUMMARY",
+              aiNextAction: "FAKE-NEXT-ACTION",
+              aiLanguage: "en",
+              aiEscalate: true,
+              aiEscalateReason: "FAKE-ESCALATE-REASON",
             })
             .where(eq(tickets.id, id));
         },

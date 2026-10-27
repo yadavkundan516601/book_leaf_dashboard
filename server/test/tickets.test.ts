@@ -144,7 +144,10 @@ describe("RBAC", () => {
     await admin.post(`/api/v1/tickets/${id}/reclassify`);
     await admin.post(`/api/v1/tickets/${id}/messages`).send({ body: "On it." });
 
-    const forbiddenKeys = ["notes", "classification", "assignee", "events", "context", "slaBreached", "firstRespondedAt"];
+    const forbiddenKeys = [
+      "notes", "classification", "assignee", "events", "context", "slaBreached", "firstRespondedAt",
+      "sentiment", "summary", "nextAction", "escalate", "escalateReason", "language",
+    ];
     const detail = await priya.get(`/api/v1/tickets/${id}`);
     const list = await priya.get("/api/v1/tickets");
     for (const body of [detail.body, list.body.data.find((x: { id: string }) => x.id === id)]) {
@@ -153,6 +156,25 @@ describe("RBAC", () => {
     }
     expect(detail.text).not.toContain("payout batch failed");
     expect(detail.text).not.toContain("royalty_payments");
+    for (const text of [detail.text, list.text]) {
+      for (const secret of ["FAKE-TRIAGE-SUMMARY", "FAKE-NEXT-ACTION", "FAKE-ESCALATE-REASON", "frustrated"]) {
+        expect(text).not.toContain(secret);
+      }
+    }
+
+    // Admins get the triage analysis on both the detail and the queue row.
+    const adminDetail = await admin.get(`/api/v1/tickets/${id}`);
+    const triage = {
+      sentiment: "frustrated",
+      summary: "FAKE-TRIAGE-SUMMARY",
+      nextAction: "FAKE-NEXT-ACTION",
+      escalate: true,
+      escalateReason: "FAKE-ESCALATE-REASON",
+      language: "en",
+    };
+    expect(adminDetail.body.classification).toMatchObject(triage);
+    const adminRow = (await admin.get("/api/v1/tickets").query({ q: adminDetail.body.reference })).body.data[0];
+    expect(adminRow.classification).toMatchObject(triage);
   });
 });
 

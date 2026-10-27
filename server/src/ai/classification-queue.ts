@@ -4,7 +4,9 @@
  * limit, bad output) falls back to the deterministic rules classifier, so a
  * ticket is always classified. Written BookLeaf policy is applied on top of
  * either source. Admin overrides are never overwritten: the classifier's
- * output still lands in suggested* so agreement can be measured.
+ * output still lands in suggested* so agreement can be measured. The triage
+ * analysis (sentiment, summary, next action, escalation, language) is
+ * refreshed on every run in the same transaction.
  *
  * Jobs that fail for non-AI reasons (DB errors) are logged and left
  * `pending`; `recoverPending()` retries them up to MAX_ATTEMPTS.
@@ -19,15 +21,15 @@ import type { Logger } from "../lib/logger.js";
 import type { EventBus } from "../modules/events/bus.js";
 import type { ClassificationQueue } from "./index.js";
 import type { GuardedLlm } from "./llm-client.js";
-import { applyPolicy } from "./policy.js";
+import { applyPolicy, policyFacts } from "./policy.js";
 import { AiError } from "./provider.js";
-import { buildClassificationUser, CLASSIFY_MAX_TOKENS, CLASSIFY_SYSTEM, classificationSchema } from "./prompts.js";
+import { buildClassificationUser, CLASSIFY_MAX_TOKENS, CLASSIFY_SYSTEM, classificationSchema, RATIONALE_MAX_CHARS } from "./prompts.js";
 import { classifyByRules, type ClassificationResult } from "./rules-classifier.js";
 import { loadTicketContext } from "./ticket-context.js";
 
 /** Tickets that keep failing (e.g. a poisoned row) stop being retried on recovery. */
 export const MAX_CLASSIFICATION_ATTEMPTS = 5;
-export const RATIONALE_MAX_CHARS = 240;
+export { RATIONALE_MAX_CHARS };
 
 export interface ClassificationQueueDeps {
   db: Db;
@@ -79,15 +81,13 @@ export function createClassificationQueue(deps: ClassificationQueueDeps): Classi
       raw = classifyByRules(ctx.ticket.subject, ctx.ticket.description);
       source = "rules";
     }
-    const policed = applyPolicy(raw, `${ctx.ticket.subject}\n${ctx.ticket.description}`);
-    return {
-      source,
-      result: {
-        ...policed,
-        confidence: clamp01(policed.confidence),
-        rationale: fitRationale(raw.rationale, policed.rationale.slice(raw.rationale.length)),
-      },
-    };
+    const { guardrails, policyNote, ...policed } = applyPolicy(
+      { ...raw, confidence: clamp01(raw.confidence) },
+      `${ctx.ticket.subject}\n${ctx.ticket.description}`,
+      policyFacts(ctx),
+    );
+    if (guardrails.length) log.info({ ticketId, guardrails }, "classification policy guardrails applied");
+    return { source, result: { ...policed, rationale: fitRationale(raw.rationale, policyNote) } };
   }
 
   /** Returns false when the ticket does not exist. Throws only on DB/unexpected errors. */
@@ -126,6 +126,13 @@ export function createClassificationQueue(deps: ClassificationQueueDeps): Classi
           classificationRationale: result.rationale,
           classificationState: "completed",
           classifiedAt: now(),
+          // Analysis fields have no admin override: they always reflect the latest run.
+          aiSentiment: result.sentiment,
+          aiSummary: result.summary,
+          aiNextAction: result.nextAction,
+          aiLanguage: result.language,
+          aiEscalate: result.escalate,
+          aiEscalateReason: result.escalateReason,
           ...(current.categorySource !== "admin" && { category: result.category, categorySource: source }),
           ...(current.prioritySource !== "admin" && { priority: result.priority, prioritySource: source }),
         })
@@ -136,7 +143,7 @@ export function createClassificationQueue(deps: ClassificationQueueDeps): Classi
         actorId: null,
         type: "classified",
         fromValue: current.suggestedCategory ? `${current.suggestedCategory}/${current.suggestedPriority}` : null,
-        toValue: `${result.category}/${result.priority} via ${source}`,
+        toValue: `${result.category}/${result.priority} via ${source}${result.escalate ? ", escalate" : ""}`,
       });
       return current.authorId;
     });

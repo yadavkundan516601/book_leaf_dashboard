@@ -210,7 +210,7 @@ paths:
 
         **Admins:** the support queue (`AdminTicketSummary`). Default sort `urgency`: unresolved
         (open, in progress) first, then priority (critical → low, with still-classifying tickets between
-        high and medium), then oldest first.
+        high and medium), then tickets flagged for escalation, then oldest first.
       parameters:
         - { name: status, in: query, style: form, explode: true, schema: { type: array, items: { $ref: "#/components/schemas/TicketStatus" } }, description: "Repeat to match any of several values." }
         - { name: category, in: query, style: form, explode: true, schema: { type: array, items: { $ref: "#/components/schemas/TicketCategory" } } }
@@ -763,7 +763,10 @@ components:
 
     Classification:
       type: object
-      required: [state, category, categorySource, priority, prioritySource, suggestedCategory, suggestedPriority, confidence, rationale, classifiedAt]
+      description: Admin-only. Never included in author-facing responses.
+      required:
+        [state, category, categorySource, priority, prioritySource, suggestedCategory, suggestedPriority, confidence, rationale,
+         classifiedAt, sentiment, summary, nextAction, escalate, escalateReason, language]
       properties:
         state: { type: string, enum: [pending, completed] }
         category: { oneOf: [{ $ref: "#/components/schemas/TicketCategory" }, { type: "null" }] }
@@ -777,6 +780,23 @@ components:
         confidence: { type: [number, "null"], minimum: 0, maximum: 1 }
         rationale: { type: [string, "null"] }
         classifiedAt: { type: [string, "null"], format: date-time }
+        sentiment:
+          type: [string, "null"]
+          enum: [calm, concerned, frustrated, angry, null]
+          description: Author's tone from the latest classification run (AI or rules). Null until classified.
+        summary: { type: [string, "null"], maxLength: 200, description: One plain sentence saying what the author wants. }
+        nextAction: { type: [string, "null"], maxLength: 160, description: Suggested first step for the agent. }
+        escalate:
+          type: boolean
+          description: >-
+            Needs escalation (legal/regulatory or public-shaming threat, money withheld a year or more, repeated
+            unresolved contact, safety or data-privacy issue, angry author with overdue royalties). Escalated unresolved
+            tickets sort first within their priority in the `urgency` sort.
+        escalateReason: { type: [string, "null"], maxLength: 160 }
+        language:
+          type: [string, "null"]
+          enum: [en, hi, hinglish, other, null]
+          description: "`hinglish` = Hindi in Latin script mixed with English."
 
     AdminRef:
       type: object
