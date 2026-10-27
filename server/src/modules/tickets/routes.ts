@@ -62,8 +62,7 @@ export function ticketsRouter(ctx: AppContext): Router {
   });
 
   r.post("/:id/draft", adminOnly, async (req, res) => {
-    const { regenerate } = parse(generateDraftSchema, req.body ?? {});
-    res.json(await tickets.draft(currentUser(req), ticketId(req), regenerate));
+    res.json(await tickets.draft(currentUser(req), ticketId(req), parse(generateDraftSchema, req.body ?? {})));
   });
 
   r.post("/:id/reclassify", adminOnly, async (req, res) => {

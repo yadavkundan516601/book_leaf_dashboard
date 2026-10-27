@@ -10,6 +10,9 @@
  *   AI metadata and assignment never appear in the author type.
  */
 import { z } from "zod";
+import type { DraftChecklistItem, DraftGrounding, DraftWarning } from "./draft-check.js";
+
+export * from "./draft-check.js";
 
 // ---------------------------------------------------------------------------
 // Vocabulary
@@ -182,10 +185,33 @@ export const listTicketsQuerySchema = z.object({
 });
 export type ListTicketsQuery = z.input<typeof listTicketsQuerySchema>;
 
-export const generateDraftSchema = z.object({
-  /** Force a fresh generation instead of returning the cached draft. */
-  regenerate: z.boolean().default(false),
-});
+export const DRAFT_REFINE_INSTRUCTIONS = ["shorter", "warmer", "clearer", "add_next_steps", "custom"] as const;
+export type DraftRefineInstruction = (typeof DRAFT_REFINE_INSTRUCTIONS)[number];
+
+export const DRAFT_CUSTOM_INSTRUCTION_MAX = 300;
+export const DRAFT_BASE_MAX = 4000;
+
+export const generateDraftSchema = z
+  .object({
+    /** Force a fresh generation instead of returning the cached draft. */
+    regenerate: z.boolean().default(false),
+    /** Refine `baseDraft` instead of drafting from scratch. Always calls the model; never cached or stored. */
+    instruction: z.enum(DRAFT_REFINE_INSTRUCTIONS).optional(),
+    /** Free-text refinement, required when instruction = custom. */
+    customInstruction: z.string().trim().min(1).max(DRAFT_CUSTOM_INSTRUCTION_MAX).optional(),
+    /** The admin's current text to refine, required with `instruction`. */
+    baseDraft: z.string().trim().min(1).max(DRAFT_BASE_MAX).optional(),
+  })
+  .superRefine((v, ctx) => {
+    if (v.instruction && !v.baseDraft) {
+      ctx.addIssue({ code: "custom", path: ["baseDraft"], message: "Write or draft a reply first, then refine it" });
+    }
+    if (v.instruction === "custom" && !v.customInstruction) {
+      ctx.addIssue({ code: "custom", path: ["customInstruction"], message: "Describe how the reply should change" });
+    }
+  });
+export type GenerateDraftInput = z.input<typeof generateDraftSchema>;
+export type GenerateDraftOptions = z.output<typeof generateDraftSchema>;
 
 // ---------------------------------------------------------------------------
 // Response DTOs
@@ -381,6 +407,11 @@ export interface DraftDto {
   kbSections: string[];
   createdAt: string;
   cached: boolean;
+  /** Facts the reply may quote; the composer re-runs `checkDraft` against these as the admin edits. */
+  grounding: DraftGrounding;
+  /** `checkDraft(body, grounding)` for the returned body. */
+  warnings: DraftWarning[];
+  checklist: DraftChecklistItem[];
 }
 
 export interface AdminStatsDto {
