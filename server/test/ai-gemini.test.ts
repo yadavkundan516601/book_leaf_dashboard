@@ -122,6 +122,8 @@ describe("gemini provider: errors and retries", () => {
       [apiError(403), "auth"],
       [apiError(404), "model_not_found"],
       [apiError(400), "bad_request"],
+      // Observed from the real API: a wrong key is HTTP 400 INVALID_ARGUMENT, not 401.
+      [apiError(400, { message: "API key not valid. Please pass a valid API key.", status: "INVALID_ARGUMENT" }), "auth"],
       [Object.assign(new Error("This operation was aborted"), { name: "AbortError" }), "timeout"],
       [new DOMException("signal timed out", "TimeoutError"), "timeout"],
       [new TypeError("fetch failed", { cause: { code: "ECONNRESET" } }), "connection"],

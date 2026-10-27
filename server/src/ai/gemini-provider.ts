@@ -87,6 +87,10 @@ export function toGeminiAiError(e: unknown): AiError {
     if (status === 401 || status === 403) return new AiError("auth", msg);
     if (status === 404) return new AiError("model_not_found", msg);
     if (status === 408) return new AiError("timeout", msg);
+    // Google reports a wrong or revoked key as HTTP 400 INVALID_ARGUMENT ("API key not valid"), not 401.
+    if (status === 400 && /API_KEY_INVALID|API key not valid|API key expired|API key was reported as (leaked|invalid)/i.test(msg)) {
+      return new AiError("auth", msg);
+    }
     if (status === 400) return new AiError("bad_request", msg);
     return new AiError("unknown", msg);
   }

@@ -65,6 +65,7 @@ const UNAVAILABLE_DETAIL: Partial<Record<string, string>> = {
   overloaded: "the AI service is overloaded",
   refusal: "the AI declined to draft this reply",
   invalid_output: "the AI response was unusable",
+  auth: "the AI key was rejected, check GEMINI_API_KEY",
 };
 
 export function unavailableNotice(err: AiError): string {

@@ -30,7 +30,7 @@ The first start creates an embedded database, loads the sample data (10 authors,
 cp server/.env.example server/.env
 ```
 
-Open `server/.env`, uncomment `ANTHROPIC_API_KEY=`, paste your key, and restart. The "AI Assistant" tile on the admin queue changes from *Degraded* to *Available*.
+Get a free key at [Google AI Studio](https://aistudio.google.com/apikey), open `server/.env`, uncomment `GEMINI_API_KEY=`, paste your key, and restart. The "AI Assistant" tile on the admin queue changes from *Degraded* to *Available*.
 
 **Handy commands**
 
@@ -39,7 +39,7 @@ Open `server/.env`, uncomment `ANTHROPIC_API_KEY=`, paste your key, and restart.
 | `npm test` | Runs the server tests (they never call the real AI) |
 | `npm run typecheck` | Type-checks everything |
 | `npm run dev -w web` | Frontend with hot reload at http://localhost:5173 |
-| `npm run eval:classifier -w server` | Checks classification accuracy (uses the real model if a key is set) |
+| `npm run eval:classifier -w server` | Checks classification accuracy (uses Gemini if a key is set) |
 | `rm -rf server/.data` | Resets the local data (stop the server first) |
 
 To use your own Postgres instead of the embedded one, set `DATABASE_URL` in `server/.env`.
@@ -76,30 +76,36 @@ Along the way you can change the category or priority (your change is marked *Ad
 
 ## How the AI works
 
-**Model:** Claude Haiku 4.5. The tasks are short and rule-bound, so a small fast model is enough and keeps costs low (a rough estimate is about $5 per 1,000 tickets). You can change the model for each task in `.env`.
+**Provider: Google Gemini** (free tier works). Classification runs on `gemini-3.5-flash-lite` and drafts/answers on `gemini-3.8-flash` by default; change them with `AI_CLASSIFY_MODEL` / `AI_DRAFT_MODEL`. If a model id isn't available to your key, the app automatically falls back to the next Gemini model and remembers the one that works. Anthropic Claude is still supported as an alternative (`AI_PROVIDER=anthropic` with `ANTHROPIC_API_KEY`).
 
-**Two jobs:**
+**Set it up:** create a key at [Google AI Studio](https://aistudio.google.com/apikey) and put it in `server/.env` as `GEMINI_API_KEY=...`. The key stays on the server and is never sent to the browser. Without a key the app still works on rules and templates.
 
-| Job | When it runs | What it returns |
+**What the AI does**
+
+| Job | When | What you get |
 |---|---|---|
-| Classify | In the background right after a ticket is created | Category, priority, a short reason, and a confidence score |
-| Draft a reply | When an admin opens the ticket (then cached) | A plain-text reply the admin can edit |
+| **Triage** | Background, right after a ticket is created | Category, priority, confidence, a one-line summary, the author's sentiment (calm to angry), a suggested next action, and an *escalate* flag with a reason |
+| **Draft a reply** | When an admin opens a ticket | An editable reply grounded in the author's real figures and the BookLeaf policy |
+| **Refine** | Buttons above the reply box | Shorter, Warmer, Clearer, Add next steps, or your own instruction, applied to the text you're editing, with Undo |
+| **Check before sending** | Live while the admin edits | Flags any ₹ amount, date or timeline that isn't in the author's data or the policy, plus a checklist (greeting, empathy, next step with a timeline, sign-off). This check is plain code, not AI, so it also catches mistakes in hand-written replies. |
+| **Instant answer** | Authors, on the New Query page | A short grounded answer from the author's own data and the policy before they send a ticket; it never blocks submitting |
 
-**Keeping drafts accurate.** The prompt gets facts the code works out itself: pending amount, last payout date, next payout due date, whether the ₹1,000 threshold is met, and the book's status. The model is told never to invent amounts, dates or bank details, and to say "we'll verify within 48 hours" when it lacks a fact. Nothing is ever sent automatically: an admin reviews every reply. Prompts live in `server/src/ai/prompts.ts` and the knowledge base in `server/src/ai/knowledge-base.ts`.
+**Keeping answers accurate**
+- The prompt receives facts computed by the code: pending amount, last payout, next payout date, the ₹1,000 threshold, book status. The model is told never to invent amounts, dates or bank details.
+- Every number in a draft or answer is verified against those facts. An instant answer containing an unverified figure is replaced by a plain policy answer. A draft with one gets a warning, and the admin is asked to confirm before sending.
+- Nothing is sent automatically: an admin reviews every reply.
+- Prompts live in `server/src/ai/prompts/`, the knowledge base in `server/src/ai/knowledge-base.ts`.
 
-**Keeping costs down.**
-- Each call only includes the knowledge-base sections that match the ticket, not the whole thing.
-- Drafts only include the last 6 messages of a conversation.
-- A draft is cached until something it depends on changes (ticket text, new message, book figures, the day, the knowledge base).
-- Every call's tokens and estimated cost are logged and shown on the admin dashboard.
+**Keeping costs and limits under control**
+- Each call only includes the knowledge-base sections that match the ticket, and drafts only the last 6 messages.
+- Drafts and answers are cached until something they depend on changes.
+- A built-in limiter (`AI_RPM_LIMIT`, default 12 requests a minute) keeps the app inside free-tier limits. Calls wait briefly for a slot, and past that they fall back to rules and templates instead of failing.
+- Every call's tokens and estimated cost are logged and shown on the admin dashboard (`$0.00` while `AI_FREE_TIER` is on).
 
-**When the AI fails.**
+**When the AI fails** (no key, rate limit, outage, bad output)
 - Tickets are always created first; the AI never blocks that.
-- If a call fails, a rule-based classifier sorts the ticket (marked "Rules" in the UI) and a policy template fills in the draft (with a banner saying so).
-- After 3 failures in a row, AI calls pause for a minute so a broken API doesn't slow everything down.
-- Setting `AI_DISABLED=true` forces this mode on purpose.
-
-**API key safety.** The key is read from the server's environment only. It's never in the code, never logged, and never sent to the browser.
+- A rule-based classifier fills the same fields (marked "Rules" in the UI), and drafts and instant answers fall back to policy templates, with a banner saying so.
+- After 3 failures in a row, AI calls pause for a minute so a broken API doesn't slow everything down. `AI_DISABLED=true` forces this mode on purpose.
 
 ---
 
@@ -140,11 +146,11 @@ Errors always look like this, with a sensible status code (400, 401, 403, 404, 4
 
 The app deploys as a single Docker service (the API also serves the web app), plus a Postgres database.
 
-- **Render:** `render.yaml` is ready to use. In Render choose *New → Blueprint*, pick this repo, and set `ANTHROPIC_API_KEY`. The database and `JWT_SECRET` are created for you.
+- **Render:** `render.yaml` is ready to use. In Render choose *New → Blueprint*, pick this repo, and set `GEMINI_API_KEY`. The database and `JWT_SECRET` are created for you.
 - **Any Docker host:**
   ```bash
   docker build -t bookleaf .
-  docker run -p 4000:4000 -e DATABASE_URL=... -e JWT_SECRET=... -e ANTHROPIC_API_KEY=... bookleaf
+  docker run -p 4000:4000 -e DATABASE_URL=... -e JWT_SECRET=... -e GEMINI_API_KEY=... bookleaf
   ```
 
 In production the server won't start without `DATABASE_URL` and a `JWT_SECRET` of at least 32 characters. All settings are listed in [`server/.env.example`](server/.env.example).

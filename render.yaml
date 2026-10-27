@@ -1,6 +1,6 @@
 # Render Blueprint: one Docker web service + managed Postgres.
 # Deploy: Render dashboard -> New -> Blueprint -> select this repo, then set
-# ANTHROPIC_API_KEY in the service's environment.
+# GEMINI_API_KEY in the service's environment.
 services:
   - type: web
     name: bookleaf-support-portal
@@ -20,7 +20,7 @@ services:
           property: connectionString
       - key: JWT_SECRET
         generateValue: true
-      - key: ANTHROPIC_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
       - key: DB_AUTO_MIGRATE
         value: "true"

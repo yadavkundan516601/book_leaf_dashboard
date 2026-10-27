@@ -33,7 +33,7 @@ This document explains how the BookLeaf Author Support & Communication Portal is
 │                    ▼                         ▼                                │
 │        AI layer (interface only)        EventBus (in-process pub/sub)         │
 │   classification queue · draft service · status                              │
-│   guarded LLM client → circuit breaker → provider (Anthropic SDK)            │
+│   guarded LLM client → circuit breaker → provider (Gemini / Anthropic)            │
 │   fallbacks: rules classifier · policy templates                             │
 └───────────────┬───────────────────────────────────────────────────────────────┘
                 ▼
@@ -81,7 +81,7 @@ docs/     Architecture, write-up
 
 See the README's **AI integration** section for the prompt strategy, model choice, and cost numbers. The structural decisions:
 
-- **The interface is not the vendor SDK.** Modules depend on `AiLayer` (`classification`, `drafts`, `status`). The Anthropic SDK is only used inside one provider class, and tests use a fake provider.
+- **The interface is not the vendor SDK.** Modules depend on `AiLayer` (`classification`, `drafts`, `status`). The vendor SDKs are only used inside their own provider classes (`gemini-provider.ts`, `anthropic-provider.ts`), and tests use a fake provider.
 - **Calls are guarded.** Every call goes through a guarded client that short-circuits when there is no key, when the kill switch is on, or when the circuit breaker is open. It records an `ai_calls` row and updates the breaker. The SDK's own retries cover transient 429/5xx; the breaker stops a sustained outage from adding latency to every request.
 - **Untrusted input stays data.** Author text is placed inside delimited `<ticket>` / `<conversation>` blocks, the system prompt says any instructions there must be ignored, classification output is schema-constrained (structured outputs + zod), and drafts are never sent automatically: a human always reviews them.
 
