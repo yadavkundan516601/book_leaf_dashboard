@@ -103,6 +103,15 @@ Along the way you can change the category or priority (your change is marked *Ad
 - A built-in limiter (`AI_RPM_LIMIT`, default 12 requests a minute) keeps the app inside free-tier limits. Calls wait briefly for a slot, and past that they fall back to rules and templates instead of failing.
 - Every call's tokens and estimated cost are logged and shown on the admin dashboard (`$0.00` while `AI_FREE_TIER` is on).
 
+**Measured prompt sizes** (captured from real requests; tokens are roughly characters ÷ 4)
+
+| Call | Static instructions | Per-ticket content | Output cap | Rough cost on the paid tier |
+|---|---|---|---|---|
+| Triage | ~1.4k tokens | ~0.1–0.2k (ticket text plus one line of facts; no knowledge base, no history) | 500 | about $0.001 |
+| Draft | ~0.6k tokens | ~0.7k (author facts, last 6 messages, and only the matching policy sections: 0.1–0.2k tokens instead of the full ~1.1k-token knowledge base) | 700 | about $0.002 |
+
+That is roughly $3 per 1,000 tickets with one draft each, based on Google's published prices for the default models. It is $0 on the free tier. Prices change, so check [Google's pricing page](https://ai.google.dev/gemini-api/docs/pricing) before relying on the figure.
+
 **When the AI fails** (no key, rate limit, outage, bad output)
 - Tickets are always created first; the AI never blocks that.
 - A rule-based classifier fills the same fields (marked "Rules" in the UI), and drafts and instant answers fall back to policy templates, with a banner saying so.

@@ -349,3 +349,19 @@ describe("draft service: refinement", () => {
     expect(err2).toMatchObject({ status: 503, code: "AI_UNAVAILABLE" });
   });
 });
+
+describe("general-inquiry template", () => {
+  it("answers description/bio questions from the knowledge base, and stays neutral for anything else", async () => {
+    const meta = await newTicket("AUTH001", "BK001", "Update my author bio", "Can I update the description of my book on Amazon after it's live?");
+    const other = await newTicket("AUTH001", "BK001", "Which package am I on?", "Can you tell me which publishing package my account is on?");
+    const load = async (id: string) => (await loadTicketContext(t.ctx.db, id, t.ctx.now()))!;
+    const a = templateDraft("general_inquiry", await load(meta));
+    const b = templateDraft("general_inquiry", await load(other));
+    expect(a).toContain("dashboard or by emailing the BookLeaf team");
+    expect(a).toContain("3–5 business days");
+    expect(a).not.toMatch(/replying here/i); // not a channel the knowledge base lists
+    expect(b).not.toContain("3–5 business days");
+    expect(b).toContain("within 48 hours");
+    expect(b).toContain("Whispers of the Ganges");
+  });
+});

@@ -54,7 +54,7 @@ export const KB_SECTIONS: readonly KbSection[] = [
     id: "printing",
     title: "Printing & Quality",
     categories: ["printing_quality"],
-    keywords: ["print", "misprint", "binding", "blurry", "quality", "defect", "copies", "reprint", "pages"],
+    keywords: ["print", "misprint", "binding", "blurry", "quality", "defect", "reprint", "pages"],
     body: `- In-house printing handles most orders. Overflow or specific format requirements go to Repro India or Epitome Books.
 - Standard print turnaround: 5–7 business days from order confirmation.
 - For a quality issue (misprints, binding defects, colour inconsistency) BookLeaf arranges a free reprint after verification. The author may need to share photos of the defective copy.`,

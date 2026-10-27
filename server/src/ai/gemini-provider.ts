@@ -134,6 +134,16 @@ export function thinkingConfigFor(model: string, thinking: LlmRequest["thinking"
   return undefined;
 }
 
+/**
+ * Gemini counts thinking tokens against maxOutputTokens, so a small answer budget plus any thinking can
+ * leave nothing for the answer (empty or truncated output). Add room for the thinking the request allows.
+ */
+export function outputHeadroom(thinkingConfig: ThinkingConfig | undefined, model: string): number {
+  if (!thinkingConfig) return /gemini-(2\.5|3|4)/.test(model) ? 2048 : 0; // model default = dynamic thinking
+  if (thinkingConfig.thinkingBudget !== undefined) return thinkingConfig.thinkingBudget;
+  return thinkingConfig.thinkingLevel === ThinkingLevel.MINIMAL ? 128 : 768;
+}
+
 /** zod -> the JSON Schema subset Gemini accepts: inlined, no $schema / additionalProperties. */
 export function toGeminiJsonSchema(schema: z.ZodType): unknown {
   const strip = (node: unknown): unknown => {
@@ -205,7 +215,7 @@ export function createGeminiProvider(opts: GeminiProviderOptions): LlmProvider {
           contents,
           config: {
             systemInstruction: req.system,
-            maxOutputTokens: req.maxTokens,
+            maxOutputTokens: req.maxTokens + outputHeadroom(thinkingConfig, model),
             ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
             ...(thinkingConfig ? { thinkingConfig } : {}),
             ...extra,
@@ -237,7 +247,8 @@ export function createGeminiProvider(opts: GeminiProviderOptions): LlmProvider {
     deadline: number,
   ): Promise<{ res: GeminiResponse; model: string }> {
     const known = resolvedModel.get(req.model);
-    const candidates = known ? [known] : modelCandidates(req.model);
+    // Trust a model that has answered before, but if it disappears fall through to the rest of the chain.
+    const candidates = known ? [known, ...modelCandidates(req.model).filter((m) => m !== known)] : modelCandidates(req.model);
     let lastErr: AiError | null = null;
     for (const model of candidates) {
       try {
@@ -313,10 +324,9 @@ export function createGeminiProvider(opts: GeminiProviderOptions): LlmProvider {
       const { res, model } = await generate(req, req.user, {}, deadline);
       const usage = mapUsage(res.usageMetadata);
       const text = checkResponse(res, usage);
-      if (!text) {
-        const why = finishOf(res) === "MAX_TOKENS" ? "Output truncated at max_tokens" : "Empty response";
-        throw new AiError("invalid_output", why, usage);
-      }
+      if (!text) throw new AiError("invalid_output", finishOf(res) === "MAX_TOKENS" ? "Output truncated at max_tokens" : "Empty response", usage);
+      // A reply cut off mid-sentence must never reach an admin (or the draft cache): treat it as unusable.
+      if (finishOf(res) === "MAX_TOKENS") throw new AiError("invalid_output", "Output truncated at max_tokens", usage);
       return { value: text, usage, model, stopReason: finishOf(res) };
     },
   };

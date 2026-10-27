@@ -156,13 +156,24 @@ function production(ctx: TicketContext): string[] {
   ];
 }
 
+/** Description / bio / listing-text questions, the one general topic the knowledge base answers directly. */
+const METADATA_QUESTION = /\b(descriptions?|bio|blurb|author (page|bio)|listing text|metadata|update|change|edit)\b/i;
+
 function general(ctx: TicketContext): string[] {
   const b = ctx.book;
   const which = b ? ` for ${quoted(b)}` : "";
+  if (METADATA_QUESTION.test(`${ctx.ticket.subject} ${ctx.ticket.description}`)) {
+    return [
+      "Thank you for getting in touch.",
+      `Yes, updates to your book description or author bio${which} can be submitted through your dashboard or by emailing the BookLeaf team. Changes typically reflect on the platforms within 3–5 business days.`,
+      "If you'd like us to make the change for you, send us the new text and we will take it from there.",
+    ];
+  }
+  // Anything else (packages, account questions ...): don't guess an answer the knowledge base doesn't give.
   return [
     "Thank you for getting in touch.",
-    `Updates to your book description or author bio${which} can be submitted through your dashboard, or simply by replying here or emailing the BookLeaf team with the new text. Once submitted, changes typically reflect across Amazon, Flipkart and the BookLeaf Store within 3–5 business days.`,
-    "If your question is about something else, our team will look into it and get back to you within 48 hours.",
+    `I've passed your question${b ? ` about ${quoted(b)}` : ""} to the right person on our team. We will look into it and get back to you within 48 hours.`,
+    "If there is anything that would help us answer faster, such as the book title or a screenshot, just reply here.",
   ];
 }
 

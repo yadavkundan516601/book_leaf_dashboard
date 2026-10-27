@@ -3,7 +3,7 @@ import { ApiError, ThinkingLevel, type GenerateContentParameters } from "@google
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { CircuitBreaker } from "../src/ai/circuit-breaker.js";
-import { createGeminiProvider, MAX_RETRY_DELAY_MS, modelCandidates, toGeminiAiError, type GeminiResponse } from "../src/ai/gemini-provider.js";
+import { createGeminiProvider, MAX_RETRY_DELAY_MS, modelCandidates, outputHeadroom, thinkingConfigFor, toGeminiAiError, type GeminiResponse } from "../src/ai/gemini-provider.js";
 import { createGuardedLlm } from "../src/ai/llm-client.js";
 import { estimateCostUsd } from "../src/ai/pricing.js";
 import { AiError } from "../src/ai/provider.js";
@@ -64,7 +64,8 @@ describe("gemini provider: structured output", () => {
     expect(res.value).toEqual({ category: "royalty", note: "hi" });
     expect(res.model).toBe("gemini-3.5-flash-lite");
     const config = f.calls[0]!.config!;
-    expect(config).toMatchObject({ systemInstruction: "sys", maxOutputTokens: 200, responseMimeType: "application/json" });
+    // 200 for the answer + 768 of headroom for the default LOW thinking level (thinking counts against the same limit).
+    expect(config).toMatchObject({ systemInstruction: "sys", maxOutputTokens: 200 + 768, responseMimeType: "application/json" });
     const js = config.responseJsonSchema as Record<string, unknown>;
     expect(js).toMatchObject({ type: "object", required: ["category", "note"] });
     expect(JSON.stringify(js)).not.toMatch(/additionalProperties|\$schema/);
@@ -337,5 +338,38 @@ describe("AI provider config", () => {
     const usage = { inputTokens: 1_000_000, outputTokens: 1_000_000 };
     expect(estimateCostUsd("gemini-3.5-flash-lite", usage)).toBeCloseTo(2.8);
     expect(estimateCostUsd("gemini-3.5-flash-lite", usage, { freeTier: true })).toBe(0);
+  });
+});
+
+describe("gemini provider: output budget, truncation and model drift", () => {
+  it("adds room for thinking tokens to maxOutputTokens, per model family", () => {
+    expect(outputHeadroom(thinkingConfigFor("gemini-3.8-flash", "low"), "gemini-3.8-flash")).toBe(768);
+    expect(outputHeadroom(thinkingConfigFor("gemini-3.8-flash", "off"), "gemini-3.8-flash")).toBe(128);
+    expect(outputHeadroom(thinkingConfigFor("gemini-2.5-flash", "low"), "gemini-2.5-flash")).toBe(512);
+    expect(outputHeadroom(thinkingConfigFor("gemini-2.5-flash-lite", "low"), "gemini-2.5-flash-lite")).toBe(0);
+    // thinking left on the model's default (dynamic) needs the most room; unknown model families need none
+    expect(outputHeadroom(thinkingConfigFor("gemini-3.8-flash", "default"), "gemini-3.8-flash")).toBe(2048);
+    expect(outputHeadroom(undefined, "some-other-model")).toBe(0);
+  });
+
+  it("sends the answer budget plus headroom as maxOutputTokens", async () => {
+    const f = fakeGemini([ok("hi")]);
+    await f.provider.text({ ...REQ, model: "gemini-3.8-flash", maxTokens: 700 });
+    expect(f.calls[0]!.config!.maxOutputTokens).toBe(700 + 768);
+  });
+
+  it("rejects a reply that was cut off at the token limit instead of returning half a draft", async () => {
+    const f = fakeGemini([ok("Hi Priya, thank you for writing in and I am so sorry for", { candidates: [{ finishReason: "MAX_TOKENS" }] })]);
+    await expect(f.provider.text(REQ)).rejects.toMatchObject({ kind: "invalid_output", message: expect.stringMatching(/truncated/i) });
+  });
+
+  it("falls through to the other candidates when the remembered model is later retired", async () => {
+    // 1st call: the configured model works and is remembered; 2nd call: it 404s, so the chain continues.
+    const f = fakeGemini([ok("one"), apiError(404), ok("two")]);
+    const first = await f.provider.text(REQ);
+    const second = await f.provider.text(REQ);
+    expect(first.model).toBe("gemini-3.5-flash-lite");
+    expect(f.calls.map((c) => c.model)).toEqual(["gemini-3.5-flash-lite", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"]);
+    expect(second.model).toBe("gemini-3.1-flash-lite");
   });
 });
