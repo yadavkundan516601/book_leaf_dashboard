@@ -152,7 +152,7 @@ export function createDraftService(deps: { db: Db; log: Logger; llm: GuardedLlm;
   const { db, log, llm, env } = deps;
 
   return {
-    // Wider than DraftService's `{ regenerate }`: the tickets route passes the whole parsed request body.
+    // The tickets route passes the whole parsed request body (regenerate, refine instruction, base draft).
     async getDraft(ticketId: string, opts: Pick<GenerateDraftOptions, "regenerate"> & Partial<GenerateDraftOptions>) {
       const ctx = await loadTicketContext(db, ticketId, deps.now());
       if (!ctx) throw notFound("Ticket");
