@@ -687,3 +687,47 @@
     flex: 1 1 auto;
   }
 }
+
+/* ---------- AI analysis (triage v2) ---------- */
+.aw-triage {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 0.85rem;
+}
+.aw-triage p {
+  margin: 0;
+}
+.aw-triage__title,
+.aw-triage__label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.aw-triage__escalate {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  color: var(--danger-text);
+}
+.aw-triage__summary {
+  color: var(--text);
+  font-weight: 600;
+}
+.aw-triage__tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.aw-triage__next {
+  display: grid;
+  gap: 2px;
+}

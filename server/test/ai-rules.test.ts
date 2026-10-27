@@ -21,7 +21,18 @@ describe("rules classifier", () => {
 
 describe("policy", () => {
   it("raises ISBN errors to at least high and legal threats to critical", () => {
-    const base = { category: "isbn_metadata" as const, priority: "low" as const, confidence: 0.9, rationale: "x" };
+    const base = {
+      category: "isbn_metadata" as const,
+      priority: "low" as const,
+      confidence: 0.9,
+      rationale: "x",
+      sentiment: "calm" as const,
+      summary: "s",
+      nextAction: "n",
+      escalate: false,
+      escalateReason: null,
+      language: "en" as const,
+    };
     expect(applyPolicy(base, "The ISBN on Amazon is different from my copy").priority).toBe("high");
     expect(applyPolicy({ ...base, category: "royalty_payments" }, "I will contact my lawyer").priority).toBe("critical");
     expect(applyPolicy({ ...base, priority: "medium" }, "What is an ISBN?").priority).toBe("medium");

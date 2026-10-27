@@ -10,9 +10,12 @@
 /** Bump when prompt wording changes so cached drafts are regenerated. */
 import { daysBetween, type BookRow } from "../ticket-context.js";
 
-export const PROMPT_VERSION = "1";
+export const PROMPT_VERSION = "2";
 
-export const CLASSIFY_MAX_TOKENS = 300;
+/** Triage v2 adds summary, next action and escalation text: about 150-250 output tokens. */
+export const RATIONALE_MAX_CHARS = 240;
+
+export const CLASSIFY_MAX_TOKENS = 500;
 export const DRAFT_MAX_TOKENS = 700;
 export const DRAFT_HISTORY_MESSAGES = 6;
 export const DRAFT_MESSAGE_MAX_CHARS = 800;

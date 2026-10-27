@@ -41,6 +41,8 @@ import {
   TICKET_PRIORITIES,
   TICKET_STATUSES,
   type AttachmentMeta,
+  type TriageLanguage,
+  type TriageSentiment,
 } from "@bookleaf/shared";
 
 export const roleEnum = pgEnum("user_role", ROLES);
@@ -140,6 +142,14 @@ export const tickets = pgTable(
     classificationRationale: text("classification_rationale"),
     classificationAttempts: integer("classification_attempts").notNull().default(0),
     classifiedAt: timestamp("classified_at", { withTimezone: true }),
+
+    // Triage analysis (admin-only). Refreshed on every (re)classification; values constrained in zod, not SQL.
+    aiSentiment: text("ai_sentiment").$type<TriageSentiment>(),
+    aiSummary: text("ai_summary"),
+    aiNextAction: text("ai_next_action"),
+    aiLanguage: text("ai_language").$type<TriageLanguage>(),
+    aiEscalate: boolean("ai_escalate").notNull().default(false),
+    aiEscalateReason: text("ai_escalate_reason"),
 
     assigneeId: uuid("assignee_id").references(() => users.id, { onDelete: "set null" }),
     firstRespondedAt: timestamp("first_responded_at", { withTimezone: true }),

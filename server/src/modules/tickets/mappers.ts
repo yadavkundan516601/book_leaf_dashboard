@@ -47,6 +47,12 @@ export function toClassificationDto(t: TicketRow): ClassificationDto {
     confidence: t.classificationConfidence,
     rationale: t.classificationRationale,
     classifiedAt: isoOrNull(t.classifiedAt),
+    sentiment: t.aiSentiment,
+    summary: t.aiSummary,
+    nextAction: t.aiNextAction,
+    escalate: t.aiEscalate,
+    escalateReason: t.aiEscalateReason,
+    language: t.aiLanguage,
   };
 }
 

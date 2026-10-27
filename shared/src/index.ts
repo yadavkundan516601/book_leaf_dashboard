@@ -77,6 +77,28 @@ export type ClassificationSource = (typeof CLASSIFICATION_SOURCES)[number];
 export const CLASSIFICATION_STATES = ["pending", "completed"] as const;
 export type ClassificationState = (typeof CLASSIFICATION_STATES)[number];
 
+/** Author's tone as judged by the classifier (admin-only triage signal). */
+export const TRIAGE_SENTIMENTS = ["calm", "concerned", "frustrated", "angry"] as const;
+export type TriageSentiment = (typeof TRIAGE_SENTIMENTS)[number];
+
+export const TRIAGE_SENTIMENT_LABELS: Record<TriageSentiment, string> = {
+  calm: "Calm",
+  concerned: "Concerned",
+  frustrated: "Frustrated",
+  angry: "Angry",
+};
+
+/** Language the ticket is written in; "hinglish" is Hindi written in Latin script mixed with English. */
+export const TRIAGE_LANGUAGES = ["en", "hi", "hinglish", "other"] as const;
+export type TriageLanguage = (typeof TRIAGE_LANGUAGES)[number];
+
+export const TRIAGE_LANGUAGE_LABELS: Record<TriageLanguage, string> = {
+  en: "English",
+  hi: "Hindi",
+  hinglish: "Hinglish",
+  other: "Other",
+};
+
 export const DRAFT_SOURCES = ["ai", "template"] as const;
 export type DraftSource = (typeof DRAFT_SOURCES)[number];
 
@@ -312,6 +334,16 @@ export interface ClassificationDto {
   confidence: number | null;
   rationale: string | null;
   classifiedAt: string | null;
+  /** Triage analysis from the latest (re)classification; refreshed on every run, never admin-overridden. */
+  sentiment: TriageSentiment | null;
+  /** One plain sentence: what the author wants. */
+  summary: string | null;
+  /** Suggested first step for the agent. */
+  nextAction: string | null;
+  /** True when the ticket needs a senior/escalation path; false until classified. */
+  escalate: boolean;
+  escalateReason: string | null;
+  language: TriageLanguage | null;
 }
 
 export interface AdminRefDto {

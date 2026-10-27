@@ -31,6 +31,12 @@ const aiAnswer = (over: Partial<Record<string, unknown>> = {}) => () => ({
   category: "book_status_production",
   priority: "medium",
   confidence: 0.92,
+  sentiment: "concerned",
+  language: "en",
+  summary: "Author wants a publication date for Midnight in Mysore.",
+  nextAction: "Check the current production stage and share a dated timeline.",
+  escalate: false,
+  escalateReason: null,
   ...over,
 });
 
@@ -203,6 +209,70 @@ describe("classification queue", () => {
       suggestedPriority: "high",
     });
     await expect(app.ctx.ai.classification.reclassify(randomUUID())).rejects.toMatchObject({ status: 404 });
+  });
+
+  it("persists the triage analysis, keeps admin overrides, and refreshes the analysis on reclassify", async () => {
+    let answer = aiAnswer({
+      sentiment: "angry",
+      language: "hinglish",
+      summary: "s".repeat(260),
+      nextAction: "Confirm the publication date with production.",
+      escalate: true,
+      escalateReason: "Threatens a public review",
+      priority: "low",
+    });
+    const fake = fakeProvider(() => answer());
+    const app = await boot(fake.provider);
+    const ticket = await ticketBySubject(app, "When will Midnight in Mysore");
+
+    await app.ctx.ai.classification.reclassify(ticket.id);
+    let row = await loadTicket(app, ticket.id);
+    expect(row).toMatchObject({
+      aiSentiment: "angry",
+      aiLanguage: "hinglish",
+      aiNextAction: "Confirm the publication date with production.",
+      aiEscalate: true,
+      aiEscalateReason: "Threatens a public review",
+      priority: "high", // escalate_floor guardrail lifts the model's "low"
+      prioritySource: "ai",
+    });
+    expect(row.aiSummary!.length).toBeLessThanOrEqual(200);
+    expect(row.classificationRationale).toMatch(/Policy: raised to high \(escalated tickets/);
+    let evs = await app.ctx.db.select().from(ticketEvents).where(eq(ticketEvents.ticketId, ticket.id));
+    expect(evs.find((e) => e.type === "classified")?.toValue).toBe("book_status_production/high via ai, escalate");
+
+    // An admin overrides priority; the next run refreshes the analysis but keeps the override.
+    await app.ctx.db.update(tickets).set({ priority: "low", prioritySource: "admin" }).where(eq(tickets.id, ticket.id));
+    answer = aiAnswer({ summary: "Author asks for a publication date.", sentiment: "calm", escalate: false, escalateReason: "stale" });
+    await app.ctx.ai.classification.reclassify(ticket.id);
+    row = await loadTicket(app, ticket.id);
+    expect(row).toMatchObject({
+      priority: "low",
+      prioritySource: "admin",
+      suggestedPriority: "medium",
+      aiSentiment: "calm",
+      aiLanguage: "en",
+      aiSummary: "Author asks for a publication date.",
+      aiEscalate: false,
+      aiEscalateReason: null,
+    });
+    evs = await app.ctx.db.select().from(ticketEvents).where(eq(ticketEvents.ticketId, ticket.id));
+    expect(evs.filter((e) => e.type === "classified").map((e) => e.toValue)).toContain("book_status_production/medium via ai");
+  });
+
+  it("fills the triage analysis from rules when the AI is unavailable", async () => {
+    const fake = fakeProvider(() => {
+      throw new AiError("server", "500");
+    });
+    const app = await boot(fake.provider);
+    const ticket = await ticketBySubject(app, "No royalty received since");
+    await app.ctx.ai.classification.reclassify(ticket.id);
+    const row = await loadTicket(app, ticket.id);
+    expect(row.categorySource).toBe("rules");
+    expect(row.aiSentiment).toMatch(/^(calm|concerned|frustrated|angry)$/);
+    expect(row.aiLanguage).toBe("en");
+    expect(row.aiSummary).toBeTruthy();
+    expect(row.aiNextAction).toMatch(/payout ledger/);
   });
 
   it("recoverPending classifies the seeded pending tickets and leaves nothing to recover", async () => {

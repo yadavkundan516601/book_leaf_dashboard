@@ -22,6 +22,7 @@ import { formatAge, formatCount, formatDate, formatDateTime, formatINR, formatPe
 import { slaHelp } from "../queue/QueueRow";
 import { describeEvent, SOURCE_HELP, SOURCE_LABELS } from "./format";
 import { useAssigneeChange, useClassificationChange } from "./hooks";
+import { TriageAnalysis } from "./TriageAnalysis";
 
 function Facts({ items }: { items: [string, ReactNode][] }) {
   return (
@@ -132,6 +133,8 @@ export function ClassificationCard({ ticket }: { ticket: AdminTicketDto }) {
           {c.rationale && <p className="aw-suggestion__why">{c.rationale}</p>}
         </div>
       )}
+
+      <TriageAnalysis classification={c} />
 
       <div className="aw-card__foot">
         <button
