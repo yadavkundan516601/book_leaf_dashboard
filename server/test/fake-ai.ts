@@ -1,5 +1,6 @@
 /** Deterministic in-memory AI layer so ticket tests never touch the network. */
 import { eq } from "drizzle-orm";
+import { EMPTY_DRAFT_GROUNDING, type GenerateDraftOptions } from "@bookleaf/shared";
 import type { AiLayer } from "../src/ai/index.js";
 import type { BootstrapOptions } from "../src/bootstrap.js";
 import { tickets } from "../src/db/schema.js";
@@ -9,6 +10,8 @@ export interface FakeAi {
   enqueued: string[];
   reclassified: string[];
   drafted: { ticketId: string; regenerate: boolean }[];
+  /** Every draft request as the route passed it. */
+  draftRequests: ({ ticketId: string } & GenerateDraftOptions)[];
   factory: NonNullable<BootstrapOptions["ai"]>;
 }
 
@@ -17,6 +20,7 @@ export function fakeAi(): FakeAi {
     enqueued: [],
     reclassified: [],
     drafted: [],
+    draftRequests: [],
     factory: (base): AiLayer => ({
       classification: {
         enqueue: (id) => void fake.enqueued.push(id),
@@ -48,9 +52,14 @@ export function fakeAi(): FakeAi {
         drain: async () => {},
       },
       drafts: {
-        getDraft: async (ticketId, { regenerate }) => {
-          fake.drafted.push({ ticketId, regenerate });
+        getDraft: async (ticketId, opts) => {
+          fake.drafted.push({ ticketId, regenerate: opts.regenerate });
+          // The tickets route passes the whole parsed request body (instruction, baseDraft, ...).
+          fake.draftRequests.push({ ticketId, ...(opts as GenerateDraftOptions) });
           return {
+            grounding: EMPTY_DRAFT_GROUNDING,
+            warnings: [],
+            checklist: [],
             ticketId,
             body: "Hi, thanks for reaching out.",
             source: "ai",

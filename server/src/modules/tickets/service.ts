@@ -14,6 +14,7 @@ import type {
   AuthorTicketDto,
   AuthorTicketSummaryDto,
   DraftDto,
+  GenerateDraftOptions,
   Paginated,
   TicketMessageDto,
   TicketNoteDto,
@@ -276,9 +277,10 @@ export function createTicketService(ctx: AppContext) {
       return toNoteDto({ id: note!.id, body, author: { id: user.id, name: user.name, email: user.email }, createdAt: now });
     },
 
-    async draft(user: AuthUser, id: string, regenerate: boolean): Promise<DraftDto> {
+    /** A draft for the ticket, or (with `instruction`) a refinement of the admin's `baseDraft`. */
+    async draft(user: AuthUser, id: string, input: GenerateDraftOptions): Promise<DraftDto> {
       await requireVisible(user, id);
-      return ctx.ai.drafts.getDraft(id, { regenerate });
+      return ctx.ai.drafts.getDraft(id, input);
     },
 
     async reclassify(user: AuthUser, id: string): Promise<AdminTicketDto> {

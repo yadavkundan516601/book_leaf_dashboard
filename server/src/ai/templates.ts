@@ -6,11 +6,12 @@
  * same voice and sign-off as the AI drafts, so the admin edits rather than
  * rewrites. Plain text, like the AI output.
  */
-import type { TicketCategory } from "@bookleaf/shared";
+import { DRAFT_SIGN_OFF, type TicketCategory } from "@bookleaf/shared";
 import { ROYALTY_PAYOUT_THRESHOLD_INR, ROYALTY_PAYOUT_WINDOW_DAYS, formatLongDate } from "../lib/dates.js";
 import { daysBetween, firstName, inr, isPublished, type BookRow, type TicketContext } from "./ticket-context.js";
 
-export const SIGN_OFF = "Warm regards,\nBookLeaf Author Support";
+/** The sign-off `checkDraft` looks for. */
+export const SIGN_OFF = DRAFT_SIGN_OFF;
 
 /** Production stages in order, as described in the KB. */
 const PRODUCTION_STAGES = [
