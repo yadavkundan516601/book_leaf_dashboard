@@ -79,7 +79,7 @@ docs/     Architecture, write-up
 
 ## 6. AI integration
 
-See the README's **AI integration** section for the prompt strategy, model choice, and cost numbers. The structural decisions:
+See the README's **How the AI works** section for the prompt strategy, model choice, and cost numbers. The structural decisions:
 
 - **The interface is not the vendor SDK.** Modules depend on `AiLayer` (`classification`, `drafts`, `status`). The vendor SDKs are only used inside their own provider classes (`gemini-provider.ts`, `anthropic-provider.ts`), and tests use a fake provider.
 - **Calls are guarded.** Every call goes through a guarded client that short-circuits when there is no key, when the kill switch is on, or when the circuit breaker is open. It records an `ai_calls` row and updates the breaker. The SDK's own retries cover transient 429/5xx; the breaker stops a sustained outage from adding latency to every request.
