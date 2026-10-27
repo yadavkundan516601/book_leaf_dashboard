@@ -68,6 +68,7 @@ describe("admin endpoints", () => {
       slaBreached: 1,
       ai: {
         available: true,
+        provider: "anthropic",
         model: "claude-haiku-4-5",
         calls24h: 2,
         failures24h: 1,

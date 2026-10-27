@@ -1,21 +1,24 @@
 /**
- * Composition root of the AI layer. The Anthropic SDK is only constructed
- * when an API key is configured; without one (or with AI_DISABLED, or while
- * the circuit is open) every call short-circuits and the app runs on rules
- * and templates.
+ * Composition root of the AI layer. The vendor SDK (Gemini first, Anthropic
+ * as the alternative; see AI_PROVIDER) is only constructed when its API key is
+ * configured; without one (or with AI_DISABLED, or while the circuit is open)
+ * every call short-circuits and the app runs on rules and templates.
  */
-import type { Env } from "../config/env.js";
+import type { AiProviderName, Env } from "../config/env.js";
 import type { Db } from "../db/client.js";
 import { aiCalls } from "../db/schema.js";
 import type { Logger } from "../lib/logger.js";
 import type { EventBus } from "../modules/events/bus.js";
-import { createAnthropicProvider } from "./anthropic-provider.js";
 import { CircuitBreaker } from "./circuit-breaker.js";
 import { createClassificationQueue } from "./classification-queue.js";
 import { createDraftService } from "./draft-service.js";
 import type { AiLayer } from "./index.js";
 import { createGuardedLlm } from "./llm-client.js";
 import type { LlmProvider } from "./provider.js";
+import { createProviderFromEnv } from "./provider-factory.js";
+import { createRateLimiter, type LimiterClock } from "./rate-limiter.js";
+
+export { createProviderFromEnv } from "./provider-factory.js";
 
 export interface AiLayerDeps {
   now: () => Date;
@@ -24,12 +27,20 @@ export interface AiLayerDeps {
   env: Env;
   log: Logger;
   /**
-   * Replaces the Anthropic transport (tests). Like the real one it is only
-   * used when ANTHROPIC_API_KEY is set: the key is the on/off switch.
+   * Replaces the vendor transport (tests). Like the real one it is only used
+   * when an LLM key is configured (Gemini, Google or Anthropic): a key is the
+   * on/off switch.
    */
   provider?: LlmProvider;
   /** Monotonic clock for the circuit breaker (tests). */
   monotonicNow?: () => number;
+  /** Clock for the request limiter (tests). */
+  limiterClock?: LimiterClock;
+}
+
+/** The provider an injected transport stands in for: the resolved one, else whichever key is set. */
+function injectedProviderName(env: Env): AiProviderName | null {
+  return env.AI_ACTIVE_PROVIDER ?? (env.GEMINI_API_KEY ? "gemini" : env.ANTHROPIC_API_KEY ? "anthropic" : null);
 }
 
 export function createAiLayer(deps: AiLayerDeps): AiLayer {
@@ -41,17 +52,28 @@ export function createAiLayer(deps: AiLayerDeps): AiLayer {
     now: deps.monotonicNow ?? (() => performance.now()),
   });
 
-  const apiKey = env.ANTHROPIC_API_KEY;
-  const provider = apiKey
-    ? (deps.provider ??
-      createAnthropicProvider({ apiKey, baseURL: env.AI_BASE_URL, timeoutMs: env.AI_TIMEOUT_MS, maxRetries: env.AI_MAX_RETRIES }))
-    : null;
+  let provider: LlmProvider | null = null;
+  let providerName: AiProviderName | null = null;
+  if (deps.provider) {
+    providerName = injectedProviderName(env);
+    provider = providerName ? deps.provider : null;
+  } else {
+    const built = createProviderFromEnv(env, log);
+    if (built) ({ provider, name: providerName } = built);
+    else if (env.AI_PROVIDER !== "auto") log.warn({ provider: env.AI_PROVIDER }, "AI_PROVIDER is set but its API key is missing; AI is off");
+  }
 
   const llm = createGuardedLlm({
     provider,
     disabled: env.AI_DISABLED,
     breaker,
     log,
+    // One limiter per process: classification, drafts and answers share the quota.
+    limiter: createRateLimiter({
+      limit: env.AI_RPM_LIMIT,
+      maxWaitMs: env.AI_QUEUE_WAIT_MS,
+      ...(deps.limiterClock ? { clock: deps.limiterClock } : {}),
+    }),
     record: async (row) => {
       await db.insert(aiCalls).values({
         ticketId: row.ticketId,
@@ -74,6 +96,7 @@ export function createAiLayer(deps: AiLayerDeps): AiLayer {
     status: {
       available: () => llm.unavailableReason() === null,
       models: () => ({ classify: env.AI_CLASSIFY_MODEL, draft: env.AI_DRAFT_MODEL }),
+      provider: () => (provider ? providerName : null),
     },
   };
 }

@@ -422,6 +422,8 @@ export interface AdminStatsDto {
   slaBreached: number;
   ai: {
     available: boolean;
+    /** LLM vendor in use; null when no key is configured. */
+    provider: "gemini" | "anthropic" | null;
     model: string | null;
     calls24h: number;
     failures24h: number;

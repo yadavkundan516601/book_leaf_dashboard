@@ -8,7 +8,8 @@ import { AiError, type LlmProvider, type LlmUsage } from "./provider.js";
 
 export interface AnthropicProviderOptions {
   apiKey: string;
-  baseURL: string;
+  /** Defaults to the public endpoint (see AI_BASE_URL). */
+  baseURL?: string | undefined;
   timeoutMs: number;
   maxRetries: number;
   /** Test seam: replaces the HTTP transport. */
@@ -56,10 +57,12 @@ function checkStop(stopReason: string | null, usage: LlmUsage) {
   if (stopReason === "max_tokens") throw new AiError("invalid_output", "Output truncated at max_tokens", usage);
 }
 
+const DEFAULT_BASE_URL = "https://api.anthropic.com";
+
 export function createAnthropicProvider(opts: AnthropicProviderOptions): LlmProvider {
   const client = new Anthropic({
     apiKey: opts.apiKey,
-    baseURL: opts.baseURL,
+    baseURL: opts.baseURL ?? DEFAULT_BASE_URL,
     timeout: opts.timeoutMs,
     maxRetries: opts.maxRetries,
     ...(opts.fetch ? { fetch: opts.fetch } : {}),

@@ -1,7 +1,8 @@
 /**
  * Classifier evaluation: runs BookLeaf's 7 calibration queries plus a set of
  * harder, realistic ones through the rule-based classifier and, when
- * ANTHROPIC_API_KEY is set, the live AI classifier (same prompt, schema,
+ * an LLM key is set (GEMINI_API_KEY or ANTHROPIC_API_KEY, chosen as by
+ * AI_PROVIDER), the live AI classifier (same prompt, schema,
  * model and policy guardrails as production). Prints a per-case table and
  * category accuracy for each.
  *
@@ -11,12 +12,13 @@
  * AI judges on the ticket text alone, as the rules do.
  */
 import type { TicketCategory, TicketPriority } from "@bookleaf/shared";
-import { createAnthropicProvider } from "../src/ai/anthropic-provider.js";
 import { CircuitBreaker } from "../src/ai/circuit-breaker.js";
 import { KB_EXAMPLES } from "../src/ai/knowledge-base.js";
 import { createGuardedLlm } from "../src/ai/llm-client.js";
 import { applyPolicy } from "../src/ai/policy.js";
 import { buildClassificationUser, CLASSIFY_MAX_TOKENS, CLASSIFY_SYSTEM, classificationSchema } from "../src/ai/prompts.js";
+import { createProviderFromEnv } from "../src/ai/provider-factory.js";
+import { createRateLimiter } from "../src/ai/rate-limiter.js";
 import { classifyByRules } from "../src/ai/rules-classifier.js";
 import type { TicketContext } from "../src/ai/ticket-context.js";
 import { loadEnv } from "../src/config/env.js";
@@ -97,20 +99,19 @@ async function main() {
   const env = loadEnv();
   const log = createLogger("silent", false);
   const now = new Date();
-  const llm = env.ANTHROPIC_API_KEY
+  const built = createProviderFromEnv(env, log);
+  const llm = built
     ? createGuardedLlm({
-        provider: createAnthropicProvider({
-          apiKey: env.ANTHROPIC_API_KEY,
-          baseURL: env.AI_BASE_URL,
-          timeoutMs: env.AI_TIMEOUT_MS,
-          maxRetries: env.AI_MAX_RETRIES,
-        }),
+        provider: built.provider,
         disabled: false,
         breaker: new CircuitBreaker({ threshold: 1_000, cooldownMs: 1, now: () => Date.now() }),
         record: async () => {},
         log,
+        // Same pacing as the app, but a sequential batch run may wait for its slot.
+        limiter: createRateLimiter({ limit: env.AI_RPM_LIMIT, maxWaitMs: 65_000 }),
       })
     : null;
+  if (built) console.log(`AI provider: ${built.name}, model ${env.AI_CLASSIFY_MODEL}, ${env.AI_RPM_LIMIT} requests/min\n`);
 
   async function classifyAi(c: Case): Promise<Verdict> {
     if (!llm) return { category: "error", priority: "-" };
@@ -157,7 +158,7 @@ async function main() {
   console.log(widths.map((w) => "-".repeat(w)).join("  "));
   for (const r of rows) console.log(line(r));
   const pct = (n: number) => `${n}/${CASES.length} (${Math.round((n / CASES.length) * 100)}%)`;
-  console.log(`\nCategory accuracy  rules: ${pct(rulesCorrect)}  ai: ${llm ? pct(aiCorrect) : "skipped (ANTHROPIC_API_KEY not set)"}`);
+  console.log(`\nCategory accuracy  rules: ${pct(rulesCorrect)}  ai: ${llm ? pct(aiCorrect) : "skipped (no GEMINI_API_KEY / ANTHROPIC_API_KEY set)"}`);
 }
 
 main().catch((e) => {

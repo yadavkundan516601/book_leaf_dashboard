@@ -16,6 +16,7 @@ import {
   type StructuredRequest,
   type UnavailableReason,
 } from "./provider.js";
+import type { RateLimiter } from "./rate-limiter.js";
 
 export type CallPurpose = "classify" | "draft";
 
@@ -36,8 +37,12 @@ export interface GuardedLlm {
   unavailableReason(): UnavailableReason | null;
 }
 
-/** Errors that say the service answered (so it is healthy) but the output was unusable. */
-const HEALTHY_FAILURES = new Set(["refusal", "invalid_output"]);
+/**
+ * Errors that say the service answered (so it is healthy) but the output was
+ * unusable, or the configured model id is wrong (a config problem the breaker
+ * cannot fix by waiting).
+ */
+const HEALTHY_FAILURES = new Set(["refusal", "invalid_output", "model_not_found"]);
 
 export function createGuardedLlm(deps: {
   provider: LlmProvider | null;
@@ -45,6 +50,8 @@ export function createGuardedLlm(deps: {
   breaker: CircuitBreaker;
   record: (row: AiCallRecord) => Promise<void>;
   log: Logger;
+  /** Paces outgoing calls (free-tier quotas). A rejection is local: no ai_calls row, no breaker effect. */
+  limiter?: RateLimiter;
 }): GuardedLlm {
   const unavailableReason = (): UnavailableReason | null => {
     if (!deps.provider) return "not_configured";
@@ -61,6 +68,15 @@ export function createGuardedLlm(deps: {
   ): Promise<LlmResult<T>> {
     const reason = unavailableReason();
     if (reason || !deps.provider) throw new AiError("unavailable", `AI unavailable: ${reason}`, undefined, reason ?? "not_configured");
+    if (deps.limiter) {
+      try {
+        await deps.limiter.acquire();
+      } catch (e) {
+        const err = asAiError(e);
+        deps.log.warn({ purpose, ticketId, kind: err.kind, err: err.message }, "AI call throttled locally");
+        throw err;
+      }
+    }
     if (!deps.breaker.tryAcquire()) throw new AiError("unavailable", "AI unavailable: circuit_open", undefined, "circuit_open");
 
     const started = performance.now();

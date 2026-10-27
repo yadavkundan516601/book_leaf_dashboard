@@ -29,6 +29,8 @@ export interface AiStatus {
   /** Key configured, not disabled, and circuit breaker closed. */
   available(): boolean;
   models(): { classify: string; draft: string };
+  /** The LLM vendor in use, or null when no key is configured. */
+  provider(): "gemini" | "anthropic" | null;
 }
 
 export interface AiLayer {
