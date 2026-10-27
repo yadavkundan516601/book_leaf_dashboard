@@ -21,6 +21,10 @@ const envSchema = z
 
     /** postgres://... When unset, an embedded PGlite database is used (dev/test only). */
     DATABASE_URL: z.string().url().optional(),
+    /** Optional CA certificate (PEM, `\n` allowed) to verify a managed database's TLS certificate. */
+    DATABASE_SSL_CA: z.string().optional(),
+    /** Same, as a file path (relative to where the server runs, i.e. server/). */
+    DATABASE_SSL_CA_FILE: z.string().optional(),
     /** Directory for the embedded database. "memory" keeps it in-process only. */
     PGLITE_DATA_DIR: z.string().default(".data/pglite"),
     /** Run migrations + idempotent seed on boot (handy for single-instance demos). */

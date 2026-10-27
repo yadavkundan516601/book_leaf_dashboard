@@ -2,6 +2,7 @@
  * Builds the runtime context (config, DB, AI layer) shared by the HTTP server,
  * CLI scripts and integration tests.
  */
+import { resolveDatabaseCa } from "./db/ssl.js";
 import { createAiLayer } from "./ai/index.js";
 import { DEV_JWT_SECRET, loadEnv, type Env } from "./config/env.js";
 import type { AppContext } from "./context.js";
@@ -21,7 +22,7 @@ export interface BootstrapOptions {
 export async function bootstrap(opts: BootstrapOptions = {}): Promise<AppContext> {
   const env = loadEnv({ ...process.env, ...opts.env });
   const log = opts.log ?? createLogger(env.LOG_LEVEL, env.NODE_ENV === "development");
-  const dbHandle = await createDb({ databaseUrl: env.DATABASE_URL, pgliteDataDir: env.PGLITE_DATA_DIR });
+  const dbHandle = await createDb({ databaseUrl: env.DATABASE_URL, sslCa: resolveDatabaseCa(env), pgliteDataDir: env.PGLITE_DATA_DIR });
 
   const now = opts.now ?? (() => new Date());
 

@@ -44,6 +44,12 @@ Get a free key at [Google AI Studio](https://aistudio.google.com/apikey), open `
 
 Keep your day-to-day settings in `server/.env.development` and the production values in `server/.env`. Both files are git-ignored. Dev mode always uses the embedded database, even if `server/.env` holds a real production `DATABASE_URL`, so it can't touch production data. To try the built bundle without Postgres, run `NODE_ENV=development npm start` (shell variables win over the file).
 
+**Managed Postgres (Aiven, RDS, Neon ...)** need an encrypted connection. Two ways, in order of preference:
+1. *Verified (recommended):* download your provider's CA certificate, save it as `server/certs/aiven-ca.pem` (that folder is git-ignored), and set `DATABASE_SSL_CA_FILE="certs/aiven-ca.pem"`. On hosts without files, put the PEM text in `DATABASE_SSL_CA` with `\n` for newlines.
+2. *Encrypted, issuer not verified:* end the URL with `?sslmode=require&uselibpqcompat=true`.
+
+When a CA is set the `sslmode` part of the URL is ignored and the certificate is always verified. If the database cannot be reached, the server prints what to check instead of a stack trace.
+
 **"AI drafting is not configured"?** The server only reads `server/.env` when it starts, so restart it after adding the key (stop it with Ctrl+C, then run it again). Check with `curl localhost:4000/api/v1/health`: `"ai":"available"` means the key is loaded, `"degraded"` means it isn't. `npm run ai:doctor -w server` tells you whether the key itself works. If you run the built version, rebuild first: `npm run build && npm start`.
 
 **Handy commands**

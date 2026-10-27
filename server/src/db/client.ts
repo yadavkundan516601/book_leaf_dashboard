@@ -16,6 +16,7 @@ import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import { migrate as migratePglite } from "drizzle-orm/pglite/migrator";
 import { PGlite } from "@electric-sql/pglite";
 import pg from "pg";
+import { buildPoolConfig } from "./ssl.js";
 import * as schema from "./schema.js";
 
 export type Db = NodePgDatabase<typeof schema>;
@@ -40,6 +41,8 @@ function resolveMigrationsFolder(): string {
 
 export interface DbOptions {
   databaseUrl?: string;
+  /** CA certificate (PEM) to verify the database's TLS certificate against. */
+  sslCa?: string;
   pgliteDataDir: string;
 }
 
@@ -48,7 +51,7 @@ export async function createDb(opts: DbOptions): Promise<DbHandle> {
 
   if (opts.databaseUrl) {
     const pool = new pg.Pool({
-      connectionString: opts.databaseUrl,
+      ...buildPoolConfig(opts.databaseUrl, opts.sslCa),
       max: 10,
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 10_000,
