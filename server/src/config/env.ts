@@ -121,8 +121,23 @@ function resolveAiConfig<
 
 export type Env = z.infer<typeof envSchema>;
 
+/**
+ * Treats empty values and `<PLACEHOLDER>` values as "not set". That makes the template file safe to copy
+ * as it is: `GEMINI_API_KEY="<YOUR_KEY>"` left unedited must not be mistaken for a real key.
+ */
+export function withoutBlankValues(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const out: NodeJS.ProcessEnv = {};
+  for (const [key, value] of Object.entries(source)) {
+    if (value === undefined) continue;
+    const v = value.trim();
+    if (v === "" || /^<[^<>]*>$/.test(v)) continue;
+    out[key] = value;
+  }
+  return out;
+}
+
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
-  const parsed = envSchema.safeParse(source);
+  const parsed = envSchema.safeParse(withoutBlankValues(source));
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `  - ${i.path.join(".")}: ${i.message}`).join("\n");
     throw new Error(`Invalid environment configuration:\n${issues}`);

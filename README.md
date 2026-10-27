@@ -30,7 +30,7 @@ The first start creates an embedded database, loads the sample data (10 authors,
 cp server/.env.example server/.env
 ```
 
-Get a free key at [Google AI Studio](https://aistudio.google.com/apikey), open `server/.env`, uncomment `GEMINI_API_KEY=`, paste your key, then run `npm run ai:doctor -w server` to confirm it works, and restart the server. The "AI Assistant" tile on the admin queue changes from *Degraded* to *Available*.
+Get a free key at [Google AI Studio](https://aistudio.google.com/apikey), open `server/.env`, replace the placeholder in `GEMINI_API_KEY="<YOUR_GEMINI_API_KEY>"` with your key, then run `npm run ai:doctor -w server` to confirm it works, and restart the server. The "AI Assistant" tile on the admin queue changes from *Degraded* to *Available*.
 
 **Handy commands**
 

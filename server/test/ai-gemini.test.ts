@@ -373,3 +373,20 @@ describe("gemini provider: output budget, truncation and model drift", () => {
     expect(second.model).toBe("gemini-3.1-flash-lite");
   });
 });
+
+describe("env template", () => {
+  it("treats empty and <PLACEHOLDER> values as unset, so an unedited template never switches the AI on", () => {
+    const env = loadEnv({ NODE_ENV: "test", GEMINI_API_KEY: "<YOUR_GEMINI_API_KEY>", ANTHROPIC_API_KEY: "", AI_CLASSIFY_MODEL: "", DATABASE_URL: "<POSTGRES_URL>", JWT_SECRET: "<RANDOM_SECRET_32_CHARS_OR_MORE>" });
+    expect(env.AI_ACTIVE_PROVIDER).toBeNull();
+    expect(env.GEMINI_API_KEY).toBeUndefined();
+    expect(env.DATABASE_URL).toBeUndefined();
+    expect(env.JWT_SECRET).toBeUndefined();
+    expect(env.AI_CLASSIFY_MODEL).toBe("gemini-3.5-flash-lite"); // falls back to the default
+    // a real value next to placeholders still counts
+    expect(loadEnv({ NODE_ENV: "test", GEMINI_API_KEY: "AIza-real", ANTHROPIC_API_KEY: "<KEY>" }).AI_ACTIVE_PROVIDER).toBe("gemini");
+  });
+
+  it("refuses to start in production while required secrets are still placeholders", () => {
+    expect(() => loadEnv({ NODE_ENV: "production", JWT_SECRET: "<RANDOM_SECRET_32_CHARS_OR_MORE>", DATABASE_URL: "<POSTGRES_URL>" })).toThrow(/JWT_SECRET[\s\S]*DATABASE_URL|DATABASE_URL[\s\S]*JWT_SECRET/);
+  });
+});
