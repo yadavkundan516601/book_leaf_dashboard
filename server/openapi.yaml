@@ -907,16 +907,20 @@ components:
         ai:
           type: object
           required:
-            [available, model, calls24h, failures24h, inputTokens24h, outputTokens24h, estimatedCostUsd24h, categoryAgreement,
+            [available, provider, model, calls24h, failures24h, inputTokens24h, outputTokens24h, estimatedCostUsd24h, categoryAgreement,
              priorityAgreement, draftUsageRate]
           properties:
             available: { type: boolean }
+            provider:
+              type: [string, "null"]
+              enum: [gemini, anthropic, null]
+              description: "LLM vendor in use (AI_PROVIDER, or `auto`: Gemini when a Gemini key is set, else Anthropic). `null` = no key configured."
             model: { type: [string, "null"] }
             calls24h: { type: integer }
             failures24h: { type: integer }
             inputTokens24h: { type: integer }
             outputTokens24h: { type: integer }
-            estimatedCostUsd24h: { type: number }
+            estimatedCostUsd24h: { type: number, description: "Estimate from list prices; 0 when AI_FREE_TIER is on (default for Gemini). Token counts are always reported." }
             categoryAgreement: { type: [number, "null"], minimum: 0, maximum: 1, description: "Share of classified tickets whose category matches the classifier's suggestion." }
             priorityAgreement: { type: [number, "null"], minimum: 0, maximum: 1 }
             draftUsageRate: { type: [number, "null"], minimum: 0, maximum: 1, description: "Share of admin replies that started from an AI draft." }

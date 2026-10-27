@@ -66,7 +66,7 @@ export async function computeAdminStats(ctx: AppContext): Promise<AdminStatsDto>
   for (const r of priorityRows) if (r.priority) openByPriority[r.priority] = r.n;
 
   const sum = (f: (r: (typeof aiRows)[number]) => number) => aiRows.reduce((n, r) => n + f(r), 0);
-  const cost = sum((r) => estimateCostUsd(r.model, r));
+  const cost = sum((r) => estimateCostUsd(r.model, r, { freeTier: ctx.env.AI_FREE_TIER }));
   const available = ctx.ai.status.available();
 
   return {
@@ -76,6 +76,7 @@ export async function computeAdminStats(ctx: AppContext): Promise<AdminStatsDto>
     slaBreached: queue?.slaBreached ?? 0,
     ai: {
       available,
+      provider: ctx.ai.status.provider(),
       model: available ? ctx.ai.status.models().classify : null,
       calls24h: sum((r) => r.calls),
       failures24h: sum((r) => r.failures),

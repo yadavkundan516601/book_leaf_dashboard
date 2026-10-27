@@ -56,7 +56,11 @@ export function fakeAi(): FakeAi {
           };
         },
       },
-      status: { available: () => true, models: () => ({ classify: "claude-haiku-4-5", draft: "claude-haiku-4-5" }) },
+      status: {
+        available: () => true,
+        models: () => ({ classify: "claude-haiku-4-5", draft: "claude-haiku-4-5" }),
+        provider: () => "anthropic",
+      },
     }),
   };
   return fake;

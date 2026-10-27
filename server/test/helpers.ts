@@ -33,6 +33,10 @@ export async function createTestApp(opts: BootstrapOptions = {}): Promise<TestAp
       PGLITE_DATA_DIR: "memory",
       DATABASE_URL: undefined as unknown as string,
       ANTHROPIC_API_KEY: undefined as unknown as string,
+      // Keys or a provider choice exported in the developer's shell must not reach tests.
+      GEMINI_API_KEY: undefined as unknown as string,
+      GOOGLE_API_KEY: undefined as unknown as string,
+      AI_PROVIDER: undefined as unknown as string,
       SERVE_WEB: "false",
       SEED_AUTHOR_PASSWORD: AUTHOR_PASSWORD,
       SEED_ADMIN_PASSWORD: ADMIN_PASSWORD,

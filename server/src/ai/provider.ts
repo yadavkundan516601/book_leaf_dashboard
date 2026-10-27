@@ -1,6 +1,7 @@
 /**
  * Provider-agnostic LLM interface. The rest of the AI layer only sees this,
- * so the Anthropic SDK can be swapped or faked (tests never hit the network).
+ * so the vendor SDK (Gemini or Anthropic) can be swapped or faked (tests
+ * never hit the network).
  */
 import type { z } from "zod";
 
@@ -12,6 +13,8 @@ export type AiErrorKind =
   | "server"
   | "auth"
   | "bad_request"
+  /** The configured model id does not exist (or is not offered to this key). Not a service outage. */
+  | "model_not_found"
   | "refusal"
   | "invalid_output"
   | "unavailable"
@@ -36,6 +39,8 @@ export class AiError extends Error {
     /** Tokens billed before the failure (refusal, truncated output), if known. */
     readonly usage: LlmUsage = ZERO_USAGE,
     readonly reason?: UnavailableReason,
+    /** Server-suggested wait before retrying (rate limits), when the provider exposes one. */
+    readonly retryAfterMs?: number,
   ) {
     super(message);
     this.name = "AiError";
@@ -50,6 +55,12 @@ export interface LlmRequest {
   user: string;
   maxTokens: number;
   temperature?: number;
+  /**
+   * Reasoning effort for providers with thinking models (Gemini). Defaults to
+   * "low": classification and drafts want latency, and thought tokens are
+   * billed as output. Providers without the concept ignore it.
+   */
+  thinking?: "off" | "low" | "default";
 }
 
 export interface StructuredRequest<T> extends LlmRequest {
