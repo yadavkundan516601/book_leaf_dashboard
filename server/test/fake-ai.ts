@@ -57,6 +57,17 @@ export function fakeAi(): FakeAi {
         },
       },
       status: { available: () => true, models: () => ({ classify: "claude-haiku-4-5", draft: "claude-haiku-4-5" }) },
+      answers: {
+        answer: async () => ({
+          answer: "Royalties are paid quarterly.",
+          confidence: "medium",
+          sources: [{ id: "royalty", title: "Royalty Policy" }],
+          source: "ai",
+          notice: null,
+          canSubmitAnyway: true,
+          suggestedCategory: "royalty_payments",
+        }),
+      },
     }),
   };
   return fake;

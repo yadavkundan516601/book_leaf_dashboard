@@ -21,10 +21,16 @@ import { mountApiDocs } from "./modules/docs/routes.js";
 import { eventsRouter } from "./modules/events/routes.js";
 import { ticketsRouter } from "./modules/tickets/routes.js";
 import { adminRouter } from "./modules/admin/routes.js";
+import { aiRouter, type AiRouterOptions } from "./modules/ai/routes.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
-export function createApp(ctx: AppContext) {
+export interface AppOptions {
+  /** Overrides for the AI routes (tests use a low answer rate limit). */
+  ai?: AiRouterOptions;
+}
+
+export function createApp(ctx: AppContext, opts: AppOptions = {}) {
   const app = express();
   app.disable("x-powered-by");
   if (ctx.env.TRUST_PROXY) app.set("trust proxy", 1);
@@ -99,6 +105,7 @@ export function createApp(ctx: AppContext) {
   authed.use("/tickets", ticketsRouter(ctx));
   authed.use("/events", eventsRouter(ctx));
   authed.use("/admin", adminRouter(ctx));
+  authed.use("/ai", aiRouter(ctx, opts.ai));
   v1.use(authed);
 
   app.use("/api/v1", v1);

@@ -7,7 +7,7 @@
  * back to deterministic rules; drafts fall back to KB-based templates. Callers
  * only see errors for genuinely bad input (e.g. unknown ticket id -> NotFound).
  */
-import type { DraftDto } from "@bookleaf/shared";
+import type { AnswerDto, AnswerRequest, DraftDto } from "@bookleaf/shared";
 
 export interface ClassificationQueue {
   /** Fire-and-forget: classify the ticket in the background, persist, emit `ticket.classified`. */
@@ -35,6 +35,12 @@ export interface AiLayer {
   classification: ClassificationQueue;
   drafts: DraftService;
   status: AiStatus;
+  answers: AnswerService;
+}
+
+export interface AnswerService {
+  /** Instant answer to an author's question from their own data and the KB. Falls back to a template; never fails on AI errors. */
+  answer(author: { userId: string; authorId: string }, input: AnswerRequest): Promise<AnswerDto>;
 }
 
 export { createAiLayer } from "./create.js";

@@ -187,6 +187,19 @@ export const generateDraftSchema = z.object({
   regenerate: z.boolean().default(false),
 });
 
+/** Author "instant answer" before raising a ticket. */
+export const answerRequestSchema = z.object({
+  question: trimmed(10, 1000, "Question"),
+  subject: z.string().trim().max(150, "Subject must be at most 150 characters").optional(),
+  /** null or omitted = account-level question. */
+  bookId: z.string().trim().min(1).max(32).nullable().optional(),
+});
+export type AnswerRequestInput = z.input<typeof answerRequestSchema>;
+export type AnswerRequest = z.infer<typeof answerRequestSchema>;
+
+export const ANSWER_CONFIDENCES = ["high", "medium", "low"] as const;
+export type AnswerConfidence = (typeof ANSWER_CONFIDENCES)[number];
+
 // ---------------------------------------------------------------------------
 // Response DTOs
 // ---------------------------------------------------------------------------
@@ -381,6 +394,26 @@ export interface DraftDto {
   kbSections: string[];
   createdAt: string;
   cached: boolean;
+}
+
+export interface AnswerSourceDto {
+  id: string;
+  title: string;
+}
+
+export interface AnswerDto {
+  /** Plain text, written to the author. */
+  answer: string;
+  confidence: AnswerConfidence;
+  /** Knowledge-base sections the answer is based on. */
+  sources: AnswerSourceDto[];
+  /** `template` = policy summary used when the assistant is unavailable or its answer could not be verified. */
+  source: DraftSource;
+  /** Shown with template answers. */
+  notice: string | null;
+  /** The author can always send the query; an answer never blocks it. */
+  canSubmitAnyway: true;
+  suggestedCategory: TicketCategory;
 }
 
 export interface AdminStatsDto {

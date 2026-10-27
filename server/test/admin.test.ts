@@ -103,6 +103,7 @@ describe("API docs", () => {
         "/tickets/{id}/notes",
         "/tickets/{id}/draft",
         "/tickets/{id}/reclassify",
+        "/ai/answer",
         "/admin/team",
         "/admin/stats",
         "/admin/dashboard",

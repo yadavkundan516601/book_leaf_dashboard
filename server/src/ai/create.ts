@@ -16,6 +16,7 @@ import { createDraftService } from "./draft-service.js";
 import type { AiLayer } from "./index.js";
 import { createGuardedLlm } from "./llm-client.js";
 import type { LlmProvider } from "./provider.js";
+import { createAnswerService } from "./answer-service.js";
 
 export interface AiLayerDeps {
   now: () => Date;
@@ -75,5 +76,6 @@ export function createAiLayer(deps: AiLayerDeps): AiLayer {
       available: () => llm.unavailableReason() === null,
       models: () => ({ classify: env.AI_CLASSIFY_MODEL, draft: env.AI_DRAFT_MODEL }),
     },
+    answers: createAnswerService({ db, log, llm, model: env.AI_DRAFT_MODEL, now }),
   };
 }
