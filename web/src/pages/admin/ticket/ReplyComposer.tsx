@@ -1,12 +1,23 @@
-import { createMessageSchema, type AdminTicketDto, type CreateMessageInput, type DraftDto } from "@bookleaf/shared";
+import {
+  DRAFT_BASE_MAX,
+  checkDraft,
+  createMessageSchema,
+  type AdminTicketDto,
+  type CreateMessageInput,
+  type DraftDto,
+  type DraftGrounding,
+  type DraftRefineInstruction,
+  type DraftWarning,
+} from "@bookleaf/shared";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { errorMessage } from "../../../api/client";
+import { ApiError, errorMessage } from "../../../api/client";
 import { useGenerateDraft, useSendMessage, useUpdateTicket } from "../../../api/hooks";
 import { useToast } from "../../../components/Toast";
 import { Card, useConfirm } from "../../../components/ui";
 import { formatCount, formatRelative } from "../../../lib/format";
 import { modKey, statusLabel } from "./format";
-import { finishConfirm, reopenStatusFor, useStatusChange } from "./hooks";
+import { DraftCheckPanel, RefineToolbar } from "./DraftAssist";
+import { finishConfirm, reopenStatusFor, useRefineDraft, useStatusChange } from "./hooks";
 
 const MAX_CHARS = 10_000;
 
@@ -146,8 +157,15 @@ function Composer({ ticket, onUnsentChange }: ComposerProps) {
   const send = useSendMessage(ticket.id);
   const generate = useGenerateDraft(ticket.id);
   const update = useUpdateTicket(ticket.id);
+  const refine = useRefineDraft(ticket.id);
   const [body, setBody] = useState("");
   const [draft, setDraft] = useState<DraftDto | null>(null);
+  // Survives sending (draft resets to null): the figures this ticket's replies may quote.
+  const [grounding, setGrounding] = useState<DraftGrounding | null>(null);
+  // The last AI rewrite, so an unedited rewrite gets the same "send as is?" check as an unedited draft.
+  const [refinedBody, setRefinedBody] = useState<string | null>(null);
+  const [refining, setRefining] = useState<DraftRefineInstruction | null>(null);
+  const [aiUnavailable, setAiUnavailable] = useState(false);
   const [usedAiDraft, setUsedAiDraft] = useState(false);
   const [manual, setManual] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -155,12 +173,15 @@ function Composer({ ticket, onUnsentChange }: ComposerProps) {
   const [busyAction, setBusyAction] = useState<"send" | "resolve" | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const sending = useRef(false);
+  // Bumped on every successful send, so a late Undo of a rewrite can't refill the box after the reply went out.
+  const sentCount = useRef(0);
   // Read inside async callbacks, where state captured at request time would be stale.
   const latest = useRef({ body, manual });
   latest.current = { body, manual };
   const requestedOnce = useRef(false);
 
   const bodyFromDraft = draft !== null && body === draft.body;
+  const untouchedAi = bodyFromDraft || (refinedBody !== null && body === refinedBody);
   const unsent = body.trim() !== "" && !bodyFromDraft;
   useEffect(() => onUnsentChange(unsent), [unsent, onUnsentChange]);
   useEffect(() => () => onUnsentChange(false), [onUnsentChange]);
@@ -176,6 +197,7 @@ function Composer({ ticket, onUnsentChange }: ComposerProps) {
     generate.mutate(opts.regenerate, {
       onSuccess: (d) => {
         setDraft(d);
+        setGrounding(d.grounding);
         // Never clobber text the agent typed while the draft was loading.
         if (opts.replace || (!latest.current.body.trim() && !latest.current.manual)) applyDraft(d);
       },
@@ -222,6 +244,60 @@ function Composer({ ticket, onUnsentChange }: ComposerProps) {
     requestAnimationFrame(() => textareaRef.current?.focus());
   };
 
+  const restoreBeforeRewrite = async (previous: { body: string; usedAiDraft: boolean; refinedBody: string | null }, rewritten: string, sent: number) => {
+    if (sentCount.current !== sent) {
+      toast.error("That reply has already been sent, so there is nothing to undo.");
+      return;
+    }
+    if (
+      latest.current.body !== rewritten &&
+      !(await confirm({
+        title: "Undo the AI rewrite?",
+        message: "The reply goes back to the text before the rewrite. Changes you made since will be lost.",
+        confirmLabel: "Undo rewrite",
+        cancelLabel: "Keep current text",
+        tone: "danger",
+      }))
+    ) {
+      return;
+    }
+    setBody(previous.body);
+    setUsedAiDraft(previous.usedAiDraft);
+    setRefinedBody(previous.refinedBody);
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  };
+
+  const onRefine = async (instruction: DraftRefineInstruction, customInstruction?: string) => {
+    if (refining || sending.current) return;
+    const previous = { body, usedAiDraft, refinedBody };
+    setRefining(instruction);
+    try {
+      const d = await refine.mutateAsync({ instruction, baseDraft: body, ...(customInstruction ? { customInstruction } : {}) });
+      const sent = sentCount.current;
+      setGrounding(d.grounding);
+      setBody(d.body);
+      setRefinedBody(d.body);
+      setUsedAiDraft(true);
+      setError(null);
+      toast.success("Reply updated", { action: { label: "Undo", onClick: () => void restoreBeforeRewrite(previous, d.body, sent) } });
+    } catch (err) {
+      if (err instanceof ApiError && err.code === "AI_UNAVAILABLE") setAiUnavailable(true);
+      else toast.error(`Couldn't rewrite the reply: ${errorMessage(err)} Your text is untouched.`);
+    } finally {
+      setRefining(null);
+    }
+  };
+
+  /** Selects a flagged snippet in the reply box, re-finding it if the text moved since the check ran. */
+  const selectWarning = (w: DraftWarning) => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start = el.value.slice(w.start, w.end) === w.text ? w.start : el.value.indexOf(w.text);
+    if (start < 0) return;
+    el.focus();
+    el.setSelectionRange(start, start + w.text.length);
+  };
+
   const deliver = async (input: CreateMessageInput) => {
     if (sending.current) return;
     sending.current = true;
@@ -231,8 +307,10 @@ function Composer({ ticket, onUnsentChange }: ComposerProps) {
     setSendError(null);
     try {
       await send.mutateAsync(input);
+      sentCount.current++;
       setBody("");
       setDraft(null);
+      setRefinedBody(null);
       setUsedAiDraft(false);
       setManual(false);
       if (resolving && previousStatus !== "resolved") {
@@ -267,8 +345,35 @@ function Composer({ ticket, onUnsentChange }: ComposerProps) {
       return;
     }
     setError(null);
-    if (
-      bodyFromDraft &&
+    // Figures the author's records don't back. Without grounding every figure would look invented, so skip.
+    const unmatched = grounding ? checkDraft(body, grounding).warnings.filter((w) => w.severity === "high") : [];
+    if (unmatched.length > 0) {
+      // One review prompt, not two: this one also covers an unedited AI text.
+      const ok = await confirm({
+        title: `This reply contains figures we couldn't match to the author's data: ${[...new Set(unmatched.map((w) => w.text))].join(", ")}. Send anyway?`,
+        message: (
+          <>
+            <ul className="aw-confirm-list">
+              {unmatched.map((w) => (
+                <li key={w.start}>
+                  <code className="aw-check__snippet">{w.text}</code> {w.message}
+                </li>
+              ))}
+            </ul>
+            {untouchedAi && <p>You also haven't edited the AI text, so the author receives it exactly as written.</p>}
+          </>
+        ),
+        confirmLabel: "Send anyway",
+        cancelLabel: "Review reply",
+        // "danger" puts the initial focus on the safe choice, Review reply.
+        tone: "danger",
+      });
+      if (!ok) {
+        selectWarning(unmatched[0]!);
+        return;
+      }
+    } else if (
+      untouchedAi &&
       !(await confirm({
         title: "You haven't edited the AI draft. Send it as is?",
         message: "The author will receive the draft exactly as written. Check names, amounts and dates first.",
@@ -301,13 +406,29 @@ function Composer({ ticket, onUnsentChange }: ComposerProps) {
   const stale = Boolean(draft && lastAuthorMessage && lastAuthorMessage.createdAt > draft.createdAt);
   const blockedReason = busy
     ? "Sending your reply…"
-    : generatingEmpty
-      ? "Wait for the AI draft, or choose “Write manually instead”."
-      : empty
-        ? "Write a reply first: the send buttons unlock once there is text."
-        : tooLong
-          ? `Shorten the reply to ${formatCount(MAX_CHARS)} characters to send it.`
-          : null;
+    : refining
+      ? "Wait for the AI rewrite to finish."
+      : generatingEmpty
+        ? "Wait for the AI draft, or choose “Write manually instead”."
+        : empty
+          ? "Write a reply first: the send buttons unlock once there is text."
+          : tooLong
+            ? `Shorten the reply to ${formatCount(MAX_CHARS)} characters to send it.`
+            : null;
+  const refineBlockedReason =
+    ticket.status === "closed"
+      ? "This ticket is closed: reopen it to rewrite a reply."
+      : busy
+        ? "Sending your reply…"
+        : generate.isPending
+          ? "Wait for the AI draft to finish."
+          : aiUnavailable
+            ? "AI is unavailable right now — your text is untouched."
+            : empty
+              ? "Write or generate a reply first."
+              : body.trim().length > DRAFT_BASE_MAX
+                ? `Rewriting works on replies up to ${formatCount(DRAFT_BASE_MAX)} characters.`
+                : null;
   const describedBy = ["aw-reply-count", error && "aw-reply-error"].filter(Boolean).join(" ");
 
   return (
@@ -326,7 +447,7 @@ function Composer({ ticket, onUnsentChange }: ComposerProps) {
         generating={generatingEmpty}
         manual={manual}
         stale={stale}
-        busy={busy || generate.isPending}
+        busy={busy || generate.isPending || refining !== null}
         error={generate.error}
         onRegenerate={() => void onRegenerate()}
         onManual={() => void onManual()}
@@ -334,13 +455,24 @@ function Composer({ ticket, onUnsentChange }: ComposerProps) {
         onRequest={() => requestDraft({ regenerate: requestedOnce.current, replace: !body.trim() })}
       />
 
+      <RefineToolbar blockedReason={refineBlockedReason} pending={refining} onRefine={(i, c) => void onRefine(i, c)} />
+
+      {aiUnavailable && (
+        <div className="aw-inline-notice" role="alert">
+          <span>AI is unavailable right now, so the reply wasn't rewritten. Your text is untouched; edit it directly.</span>
+          <button type="button" className="btn btn--sm" onClick={() => setAiUnavailable(false)}>
+            <span>Try AI again</span>
+          </button>
+        </div>
+      )}
+
       <textarea
         id="aw-reply"
         ref={textareaRef}
         className="aw-composer__input"
         rows={10}
         value={body}
-        readOnly={busy}
+        readOnly={busy || refining !== null}
         onChange={(e) => {
           setBody(e.target.value);
           if (error) setError(null);
@@ -364,6 +496,8 @@ function Composer({ ticket, onUnsentChange }: ComposerProps) {
           <span className="ui-sr-only"> characters</span>
         </span>
       </div>
+
+      <DraftCheckPanel body={body} grounding={grounding} onSelect={selectWarning} />
 
       {sendError && (
         <div className="aw-inline-error" role="alert">
