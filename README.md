@@ -27,10 +27,22 @@ The first start creates an embedded database, loads the sample data (10 authors,
 **Turn on the real AI (optional):**
 
 ```bash
-cp server/.env.example server/.env
+cp server/.env.example server/.env.development
 ```
 
-Get a free key at [Google AI Studio](https://aistudio.google.com/apikey), open `server/.env`, replace the placeholder in `GEMINI_API_KEY="<YOUR_GEMINI_API_KEY>"` with your key, then run `npm run ai:doctor -w server` to confirm it works, and restart the server. The "AI Assistant" tile on the admin queue changes from *Degraded* to *Available*.
+Get a free key at [Google AI Studio](https://aistudio.google.com/apikey), open `server/.env.development`, replace the placeholder in `GEMINI_API_KEY="<YOUR_GEMINI_API_KEY>"` with your key, then run `npm run ai:doctor -w server` to confirm it works, and restart the server. The "AI Assistant" tile on the admin queue changes from *Degraded* to *Available*.
+
+**Dev mode vs production mode**
+
+| | Dev mode | Production mode |
+|---|---|---|
+| Command | `npm run dev -w server` (and `npm run dev -w web` for hot reload at http://localhost:5173) | `npm run build` then `npm start` |
+| Settings file | `server/.env.development` (wins over `server/.env`) | `server/.env` |
+| Database | Embedded, stored in `server/.data/` (no install needed) | Your Postgres, from `DATABASE_URL` (required) |
+| Restarts on code change | Yes | No: rebuild and restart |
+| Secrets | Built-in dev secret is fine | Real `JWT_SECRET` required; the server refuses to start without it and `DATABASE_URL` |
+
+Keep your day-to-day settings in `server/.env.development` and the production values in `server/.env`. Both files are git-ignored. Dev mode always uses the embedded database, even if `server/.env` holds a real production `DATABASE_URL`, so it can't touch production data. To try the built bundle without Postgres, run `NODE_ENV=development npm start` (shell variables win over the file).
 
 **"AI drafting is not configured"?** The server only reads `server/.env` when it starts, so restart it after adding the key (stop it with Ctrl+C, then run it again). Check with `curl localhost:4000/api/v1/health`: `"ai":"available"` means the key is loaded, `"degraded"` means it isn't. `npm run ai:doctor -w server` tells you whether the key itself works. If you run the built version, rebuild first: `npm run build && npm start`.
 
