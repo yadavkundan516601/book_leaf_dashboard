@@ -1,8 +1,14 @@
 import { createApp } from "./app.js";
 import { checkGeminiModels, warmUpGemini } from "./ai/gemini-provider.js";
 import { bootstrap } from "./bootstrap.js";
+import { explainStartupError } from "./lib/startup-errors.js";
 
-const ctx = await bootstrap();
+const ctx = await bootstrap().catch((err: unknown) => {
+  const explanation = explainStartupError(err, process.env.DATABASE_URL);
+  if (!explanation) throw err; // unknown failure: keep the full stack trace
+  console.error(`\nCould not start the BookLeaf server.\n\n${explanation}\n`);
+  process.exit(1);
+});
 const app = createApp(ctx);
 
 const server = app.listen(ctx.env.PORT, () => {
